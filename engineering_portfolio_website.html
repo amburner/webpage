@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Amber Miller — Engineering Portfolio</title>
+  <script src="script.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SIDEBAR NAV -->
+
+<div>
+  <div style="
+    display:inline-block;
+    vertical-align:top;
+    width:34%;
+    box-sizing:border-box;
+    background:linear-gradient(to bottom, red, orange, yellow, green, cyan, blue, violet);
+    padding:10px;
+    border:5px outset magenta;
+    font-size:13px;
+  ">
+    <p style="font-weight:bold; text-align:center;">NAVIGATION</p>
+    <a href="images/Amber Miller 2025 Resume.pdf">
+        <button style="width:100%; margin:4px 0; background:#ccffcc; cursor: pointer;">Resume</button>
+    </a>
+    <a href="mailto:a100miller@gmail.com">
+        <img src="images/email_me.gif" style="width:100%; margin-top:8px;">
+    </a>
+  </div>
+
+  <div style="
+    display:inline-block;
+    vertical-align:top;
+    width:64%;
+  ">
+    <header>
+      <div style="text-align:center">
+        <h1 style="margin-bottom:4px;">Amber Miller</h1>
+        <p style="margin:2px 0;"><strong>Engineering Portfolio</strong></p>
+        <p class="blink" style="margin-top:2px; margin-bottom:4px;">Last updated: always</p>
+      </div>
+    </header>
+
+    <marquee scrollamount="6" style="margin-top:-20px;">🚀 Aerospace • Controls • Robotics • Systems Engineering 🚀</marquee>
+  </div>
+</div>
+
+
+<h2>Projects</h2>
+<div class="projects-container">
+  <!-- PROJECT 1 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">AIAA 2024-2025 Undergraduate Team Aircraft Design</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <img src="AIAA_project/configuration.png" alt="Aircraft configuration image" style="border:0px; width:100%;"/>
+        <p><a href="AIAA_project/AE443_Team_7_FDR.pdf">Full Report</a></p>
+        <p><a href="https://github.com/amburner/S-C-Cost---AIAA-2025-Supersonic-Aircraft">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:20px;"><strong>Role:</strong> Stability & Control, Cost</p>
+        <details><summary style="cursor:pointer; font-size:16px; color:#ff0000;">Requirements:</summary><div>
+          <ul>
+            <li>Performance: Mach 1.6 at 35,000 ft</li>
+            <li>Instantaneous turn rate ≥ 18°/s at 35,000 ft</li>
+            <li>Specific excess power and 5-g turn performance requirements at sea level and 15,000 ft</li>
+            <li>Weapons: Carry AIM-120 AMRAAMs (number and carriage method tradable)</li>
+            <li>Structure: +7g/-3g limit loads (clean, 50% int. fuel), Withstand 2133 psf dynamic pressure, 2,000 hour service life</li>
+            <li style="font-size:16px;"><strong>Stability:</strong> Subsonic longitudinal static margin between -10% & +10%</li>
+            <li>Remote Piloting: Fully remote piloted infrastructure, positive threat ID, communication bandwidth considerations</li>
+            <li style="font-size:16px;"><strong>Cost:</strong> Flyaway cost ≤ $25 million (2024 USD) for 1000 aircraft buy</li>
+          </ul>
+        </details>
+        <p><strong>Stability and Control:</strong></p>
+        <ul>
+          <li>Aircraft sizing and configuration optimization using contour plots</li>
+          <li>Horizontal tail sizing via scissor plots (static margin & tail stall)</li>
+          <li>Trim drag minimization for most fuel-demanding mission segment</li>
+          <li>Static and dynamic stability analysis using Roskam & Nelson methods</li>
+          <li>Crosswind trim triangle with asymmetric ordnance and fuel loading</li>
+          <li>Validation using AVL and aerodynamic drag buildup</li>
+        </ul>
+        <p><strong>Cost:</strong></p>
+        <ul>
+          <li>Compared Modified DAPCA IV appended with recent cost models for considerations for titanium and composite usage and Roskam cost models to ensure flyaway cost and inform design decisions including material usage, aircraft configuration, and control surface selection</li>
+          <li>Ensured flyaway cost < $25M</li>
+          <li>Lifecycle and unit cost variation with production quantity</li>
+          <li>Titanium trade study replacing up to 2400 lb of aluminum with titanium to ensure flyaway cost while meeting instantaneous turn rate requirments</li>
+        </ul>
+        <div style="text-align:center">
+          <p>Aircraft Dynamic Stability Analysis</p>
+          <img src="AIAA_project/DynamicStab.png" alt="Aircraft Dynamic Stability Analysis" style="border:0px; width:100%;"/>
+          <img src="AIAA_project/dynamicStabTable.png" alt="Aircraft Dynamic Stability Table" style="border:0px; width:100%;"/>
+          <p>RDTE Cost Analysis</p>
+          <img src="AIAA_project/DAPCABreakdown.png" alt="Aircraft DAPCA RDTE Cost" style="border:0px; width:100%;"/>
+          <img src="AIAA_project/RoskamPie.png" alt="Aircraft Roskam RDTE Cost" style="border:0px; width:100%;"/>
+          <p>Operating Cost Analysis</p>
+          <img src="AIAA_project/Operations_Cost_Breakdown.png" alt="Aircraft Roskam Operating Cost" style="border:0px; width:100%;"/>
+          <div class="tag">Aircraft Design</div>
+          <div class="tag">Stability & Control</div>
+          <div class="tag">Cost Modeling</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- PROJECT 2 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">Autonomous Drone: Art in the Sky</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <p style="font-size:24px;"><strong>Project Overview + Demo Video</strong></p>
+        <video controls width="100%">
+          <source src="Crazyfly/Autonomous Drone Presentation.mp4" type="video/mp4">
+          Your Browser Does Not Support Video
+        </video>
+        <p><a href="Crazyfly/Autonomous Drone Project.pdf">Full Report</a></p>
+        <p><a href="https://github.com/amburner/Autonomous-Drone">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:16px;">Contributions</p>
+        <ul>
+          <li>Designed and Tuned LQR Controller and Observer offline using data collected from MoCap system as well as parameters of Crazyflie Drone with MoCap and LED Deck attachments</li>
+          <li>Created Pygame Interface for User input to allow for mouse cursor drawings</li>
+          <li>Converted cursor-drawn image to numpy array containing pixel location and timestamp data</li>
+          <li>Sampled from pixel data to map a set of smooth bezier curves to the image with constraints on curvature to enable dynamically feasible flight trajectory</li>
+          <li>Auto-calibrated flight trajectory to drone location and capped maximum velocity by time scaling</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">Autonomous Systems</div>
+          <div class="tag">Art</div>
+          <div class="tag">Quadrotor Drone</div>
+          <div class="tag">Dynamical Systems</div>
+          <div class="tag">Controls</div>
+          <div class="tag">Trajectory Generation</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- PROJECT 3 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">Autonomous Drone: Obstacle Course Navigation</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <p style="font-size:24px;"><strong>Demo Video</strong></p>
+        <video controls width="100%">
+          <source src="ObstacleCourse/DroneVideo.mp4" type="video/mp4">
+          Your Browser Does Not Support Video
+        </video>
+        <p><a href="ObstacleCourse/Design, Implementation, and Testing of Drone Controller Using Optimal Observer and Controller.pdf">Full Report</a></p>
+        <p><a href="ObstacleCourse/AE 352 Quadcopter Team Project Report.pdf">Dynamical System Derivation</a></p>
+        <p><a href="https://github.com/amburner/Controls-AE353-">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:16px;">Project Overview</p>
+        <ul>
+          <li>Derived dynamical system from basic drone geometry</li>
+          <li>Designed and Tuned LQR Controller and Observer in simulation using Condynsate python package</li>
+          <li>Motivated Drone to move through obstacle course by dynamically manipulating the equilibrium</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">Autonomous Systems</div>
+          <div class="tag">Quadrotor Drone</div>
+          <div class="tag">Dynamical Systems</div>
+          <div class="tag">Controls</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- PROJECT 5 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Semi-Automatic Cat Toy Robot</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <p style="font-size:24px;"><strong>Construction + Prototype + "Final Product"</strong></p>
+        <div>
+          <img src="catBot/prototype_front.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/prototype_back.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/internals.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/DemoPic.png" style="width:49%; display:inline-block;">
+        </div>
+        <p style="font-size:24px;"><strong>Demo Video</strong></p>
+        <video controls height="600px"">
+          <source src="catBot/DemoVideo.mp4" type="video/mp4">
+          Your Browser Does Not Support Video
+        </video>
+        <p><a href="https://github.com/amburner/CatBot">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:18px;">Motivation:</p>
+        <p>The current market for cat toys contains very few options for a toy 
+          which both serves live video and allows the user to remotely play with their cat using a laser pointer.
+          Among these devices, it is typical for the video feed to have a 1500-2000 ms delay due to network latency, 
+          video encoding, decoding, and compression, and slow webhosting. Additionally, such devices typically cost upwards of $100
+          and can require a subscription service to access the video feed. The features on these devices are also very limited.
+          As such, I set out to create a low-cost semi-automatic cat toy robot that could stream live video with minimal latency
+          and allow for remote laser pointer play with my cat, but also enable custom features such as customizable laser patterns, including
+          a modular random trajectory generator, the ability to record and playback laser trajectories, and record and save video, enabling
+          the cat toy to double as a security camera.
+        </p>
+        <p style="font-size:16px;">Project Overview</p>
+        <ul>
+          <li>Built a semi-automatic cat toy robot with pan-tilt laser targeting controlled via a web interface</li>
+          <li>Developed low-latency MJPEG streaming from a Raspberry Pi camera, with live video flip and zoom controls</li>
+          <li>Implemented servo motion control with adjustable speed, angle limits, and smooth movement interpolation</li>
+          <li>Added random walk and manual targeting modes for interactive play, with recording and replay functionality</li>
+          <li>Integrated lidar sensing for distance measurement and real-time telemetry over WebSocket</li>
+          <li>Created a full-stack Python + Flask + WebSocket system with authentication, user management, and persistent configuration</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">Autonomous Systems</div>
+          <div class="tag">Quadrotor Drone</div>
+          <div class="tag">Dynamical Systems</div>
+          <div class="tag">Controls</div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <!-- PROJECT 4 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Custom Software For Expedited Calculation of Fluid Volumes in Piping Systems</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <p style="font-size:24px;"><strong>Demo Video</strong></p>
+        <video controls width="100%">
+          <source src="pdfCAD/pdfCAD Video Explanation.mp4" type="video/mp4">
+          Your Browser Does Not Support Video
+        </video>
+        <p><a href="https://github.com/amburner/pdfCAD">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:18px;">Motivation:</p>
+        <p>While Working at IMEG, the current state of completing fluid volume 
+          and pressure drop calcuations involved a lengthy excel spreadsheet where 
+          one would measure every individual twist and turn of the pipe and input that 
+          along with the pipe dimensions. For a multi-story building, 
+          these calcuations could take hours or even days. 
+          In addition, older buildings that needed mechanical system renovations often only had 
+          2D blueprints available, and converting these blueprints into a 
+          modern BIM model would be a lengthy and expensive process. 
+          As such, a method or software was needed that could expedite these calculations, 
+          while working on both BIM models and old blueprints. 
+          This software must also be intuitive to use and easy to distrubte 
+          so as to effectively replace the ubiquitous master excel spreadsheet.</p>
+        <p style="font-size:16px;">Project Overview</p>
+        <ul>
+          <li>Developed an interactive PDF-based takeoff and annotation tool tailored for MEP piping layouts</li>
+          <li>Implemented CAD-style drawing, snapping, zooming, and multi-page navigation using a custom PyQt workflow</li>
+          <li>Integrated pipe sizing logic, scale calibration, and volume calculations directly into the drawing process</li>
+          <li>Automated persistence and Excel export to generate system-level quantities and summaries for estimating and design workflows</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">Python</div>
+          <div class="tag">Business Software</div>
+          <div class="tag">Mechanial Systems</div>
+          <div class="tag">Cost Savings</div>
+        </div>
+      </div>
+    </div>
+
+  </details>
+</div>
+<footer>
+  <p>© Amber Miller</p>
+  <img src="images/rotating_aircraft.gif" alt="Rotating aircraft" style="margin-top:10px;margin-bottom:20px;margin-left:-5px;" />
+  <img src="images/robot_arm.gif" alt="Robot arm" style="margin-top:10px;margin-bottom:20px" />
+  <img src="images/rocket_ship.gif" alt="Rock ship" style="margin-top:10px; margin-bottom:20px; margin-right:20px;" />
+</footer>
+
+</body>
+</html>

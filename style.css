@@ -1,0 +1,156 @@
+/* ---------- Global Styles ---------- */
+body {
+    background: linear-gradient(45deg, #ffccff, #ccffff);
+    font-family: "Comic Sans MS", "Courier New", Courier, monospace;
+    color: #000080;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    border: 5px ridge #ff00ff;
+    padding: 20px;
+    margin-bottom: 30px;
+    background: #ffffcc;
+}
+
+h1, h2, h3 {
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #cc0000;
+}
+
+h1 {
+    font-size: 32px;
+    margin-bottom: 5px;
+    text-shadow: 2px 2px #00ffff;
+}
+
+h2 {
+    font-size: 22px;
+    border-bottom: 3px dotted #ff6600;
+    padding-bottom: 4px;
+    margin-top: 40px;
+}
+
+p, li {
+    font-size: 14px;
+    line-height: 1.4;
+    color: #003300;
+}
+
+marquee {
+    background: #ff00ff;
+    color: yellow;
+    font-weight: bold;
+    padding: 6px;
+    margin: 15px 0;
+    border: 3px dashed yellow;
+}
+
+.blink {
+    animation: blink 1s infinite;
+}
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+/* ---------- Projects Grid ---------- */
+.projects-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+/* Each project fills its grid cell */
+.project {
+    border: 4px double #0000ff;
+    padding: 15px;
+    background: #fff;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;  /* make inner content stack vertically */
+    width: 100%;             /* ensures it stretches fully */
+}
+
+/* Inner grid for project media/details */
+.project-grid {
+    display: flex;
+    flex-wrap: wrap;         /* wrap media and details on small screens */
+    gap: 15px;
+}
+
+/* Media & details take equal space on desktop, full width on mobile */
+.project-media, .project-details {
+    flex: 1 1 300px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 800px) {
+    .projects-container {
+        grid-template-columns: 1fr; /* single column on mobile */
+    }
+
+    .project-grid {
+        flex-direction: column;     /* stack media/details vertically */
+    }
+
+    .project-media, .project-details {
+        flex: 1 1 100%;
+    }
+}
+
+
+
+/* ---------- Images ---------- */
+.project-img {
+    width: 220px;
+    border: 3px solid #ff0000;
+    background: repeating-linear-gradient(
+        45deg, #ffff00, #ffff00 10px, #ff9900 10px, #ff9900 20px
+    );
+}
+
+.image-wrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ---------- Tags ---------- */
+.tag {
+    display: inline-block;
+    border: 2px solid #ff00ff;
+    padding: 2px 6px;
+    margin: 2px 4px 2px 0;
+    font-size: 12px;
+    background: #ccffff;
+    color: #000;
+}
+
+/* ---------- Footer ---------- */
+footer {
+    margin-top: 60px;
+    text-align: center;
+    font-size: 12px;
+    border-top: 4px groove #00ff00;
+    padding-top: 10px;
+    background: #ccffcc;
+}
+
+/* ---------- Decorations / Effects ---------- */
+.spark {
+    position: absolute;
+    font-size: 1em;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    animation: spark-animation 1s ease-out forwards;
+    font-family: 'Alagard', serif;
+    color: var(--spark-color);
+}
+@keyframes spark-animation {
+    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    100% { opacity: 0; transform: translate(-50%, -150%) scale(0.5); }
+}
