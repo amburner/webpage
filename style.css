@@ -1,156 +1,269 @@
-/* ---------- Global Styles ---------- */
+/* =============================================
+   AMBER MILLER — ENGINEERING PORTFOLIO
+   MAXIMUM CHAOS EDITION
+   ============================================= */
+
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+/* Animated rainbow background */
+@keyframes rainbowBg {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
 body {
-    background: linear-gradient(45deg, #ffccff, #ccffff);
+    background: linear-gradient(270deg, #ff0000, #ff7700, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+    background-size: 400% 400%;
+    animation: rainbowBg 6s ease infinite;
     font-family: "Comic Sans MS", "Courier New", Courier, monospace;
     color: #000080;
-    max-width: 900px;
+    max-width: 960px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 16px;
+    overflow-x: hidden;
 }
 
+/* ---------- Header ---------- */
 header {
-    border: 5px ridge #ff00ff;
-    padding: 20px;
-    margin-bottom: 30px;
+    border: 7px ridge #ff00ff;
+    padding: 16px 20px;
+    margin-bottom: 24px;
     background: #ffffcc;
-}
-
-h1, h2, h3 {
-    font-weight: bold;
-    text-transform: uppercase;
-    color: #cc0000;
+    box-shadow: 6px 6px 0 #ff00ff, 12px 12px 0 #00ffff, 18px 18px 0 #ffff00;
 }
 
 h1 {
-    font-size: 32px;
-    margin-bottom: 5px;
-    text-shadow: 2px 2px #00ffff;
+    font-size: 28px;
+    margin: 0 0 4px 0;
+    font-weight: bold;
+    text-transform: uppercase;
+    /* Multi-layer colored text shadow for 3D effect */
+    text-shadow:
+        3px 3px 0 #ff00ff,
+        6px 6px 0 #00ffff,
+        9px 9px 0 #ffff00,
+        11px 11px 8px rgba(0,0,0,0.4);
 }
 
+/* Rainbow letter coloring via spans injected by JS */
+.rainbow-letter:nth-child(7n+1) { color: #ff0000; }
+.rainbow-letter:nth-child(7n+2) { color: #ff7700; }
+.rainbow-letter:nth-child(7n+3) { color: #cccc00; }
+.rainbow-letter:nth-child(7n+4) { color: #00aa00; }
+.rainbow-letter:nth-child(7n+5) { color: #0000ff; }
+.rainbow-letter:nth-child(7n+6) { color: #8800cc; }
+.rainbow-letter:nth-child(7n+0) { color: #ff00aa; }
+
 h2 {
-    font-size: 22px;
+    font-size: 20px;
+    font-weight: bold;
+    text-transform: uppercase;
     border-bottom: 3px dotted #ff6600;
     padding-bottom: 4px;
-    margin-top: 40px;
+    margin: 32px 0 16px 0;
+    color: #cc0000;
+    text-shadow: 2px 2px 0 #ffff00, 4px 4px 0 #ff00ff;
+    word-break: break-word;
+}
+
+h3 {
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #cc0000;
+    word-break: break-word;
 }
 
 p, li {
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.5;
     color: #003300;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    word-break: break-word;
 }
 
+.project p  { margin: 6px 0; }
+.project ul { margin: 4px 0 8px 0; padding-left: 20px; }
+.project li { margin-bottom: 3px; }
+
+/* ---------- Marquee ---------- */
 marquee {
     background: #ff00ff;
     color: yellow;
     font-weight: bold;
     padding: 6px;
-    margin: 15px 0;
+    margin: 12px 0;
     border: 3px dashed yellow;
+    text-shadow: 1px 1px 0 #000;
 }
 
+/* ---------- Blink ---------- */
 .blink {
     animation: blink 1s infinite;
 }
 @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
 }
 
-/* ---------- Projects Grid ---------- */
+/* ---------- Glowing neon border animation ---------- */
+@keyframes neonPulse1 {
+    0%, 100% { box-shadow: 0 0 6px 2px #ff00ff, 0 0 20px 4px #ff00ff; border-color: #ff00ff; }
+    50%       { box-shadow: 0 0 18px 6px #ff88ff, 0 0 40px 10px #ff00ff; border-color: #ff88ff; }
+}
+@keyframes neonPulse2 {
+    0%, 100% { box-shadow: 0 0 6px 2px #00ffff, 0 0 20px 4px #00ffff; border-color: #00ffff; }
+    50%       { box-shadow: 0 0 18px 6px #88ffff, 0 0 40px 10px #00ffff; border-color: #88ffff; }
+}
+@keyframes neonPulse3 {
+    0%, 100% { box-shadow: 0 0 6px 2px #00ff00, 0 0 20px 4px #00ff00; border-color: #00ff00; }
+    50%       { box-shadow: 0 0 18px 6px #88ff88, 0 0 40px 10px #00ff00; border-color: #88ff88; }
+}
+@keyframes neonPulse4 {
+    0%, 100% { box-shadow: 0 0 6px 2px #ffff00, 0 0 20px 4px #ffff00; border-color: #ffff00; }
+    50%       { box-shadow: 0 0 18px 6px #ffff88, 0 0 40px 10px #ffff00; border-color: #ffff88; }
+}
+@keyframes neonPulse5 {
+    0%, 100% { box-shadow: 0 0 6px 2px #ff4400, 0 0 20px 4px #ff4400; border-color: #ff4400; }
+    50%       { box-shadow: 0 0 18px 6px #ff9966, 0 0 40px 10px #ff4400; border-color: #ff9966; }
+}
+
+/* Marching ants border animation */
+@keyframes marchingAnts {
+    to { stroke-dashoffset: -20; }
+}
+
+/* ==============================================
+   PROJECTS CONTAINER — CSS columns (no row gaps)
+   ============================================== */
 .projects-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 20px;
+    columns: 2;
+    column-gap: 20px;
 }
 
-/* Each project fills its grid cell */
+/* Cards */
 .project {
-    border: 4px double #0000ff;
-    padding: 15px;
-    background: #fff;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;  /* make inner content stack vertically */
-    width: 100%;             /* ensures it stretches fully */
-}
-
-/* Inner grid for project media/details */
-.project-grid {
-    display: flex;
-    flex-wrap: wrap;         /* wrap media and details on small screens */
-    gap: 15px;
-}
-
-/* Media & details take equal space on desktop, full width on mobile */
-.project-media, .project-details {
-    flex: 1 1 300px;
-}
-
-/* ---------- Responsive ---------- */
-@media (max-width: 800px) {
-    .projects-container {
-        grid-template-columns: 1fr; /* single column on mobile */
-    }
-
-    .project-grid {
-        flex-direction: column;     /* stack media/details vertically */
-    }
-
-    .project-media, .project-details {
-        flex: 1 1 100%;
-    }
-}
-
-
-
-/* ---------- Images ---------- */
-.project-img {
-    width: 220px;
-    border: 3px solid #ff0000;
-    background: repeating-linear-gradient(
-        45deg, #ffff00, #ffff00 10px, #ff9900 10px, #ff9900 20px
-    );
-}
-
-.image-wrapper img {
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
+    border: 5px double #ff00ff;
+    padding: 14px;
+    margin-bottom: 20px;
     width: 100%;
-    height: 100%;
-    object-fit: cover;
+    min-width: 0;
+    overflow: hidden;
+    transition: transform 0.15s ease;
+}
+
+/* Alternate card background colors */
+.project:nth-child(5n+1) { background: #fff0ff; animation-name: neonPulse1; animation-duration: 2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.project:nth-child(5n+2) { background: #f0ffff; animation-name: neonPulse2; animation-duration: 2.4s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.project:nth-child(5n+3) { background: #f0fff0; animation-name: neonPulse3; animation-duration: 1.8s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.project:nth-child(5n+4) { background: #fffff0; animation-name: neonPulse4; animation-duration: 2.2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+.project:nth-child(5n+5) { background: #fff4ee; animation-name: neonPulse5; animation-duration: 2.6s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+/* Summary titles */
+.project > summary {
+    cursor: pointer;
+    font-size: 17px;
+    color: #ff0000;
+    font-weight: bold;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    list-style: revert;
+    padding: 2px 0;
+    display: block;
+    text-shadow: 1px 1px 0 #ff88ff, 2px 2px 0 #ffff00;
+}
+
+/* Inner layout: single column */
+.project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.project-grid > div {
+    min-width: 0;
+    overflow: hidden;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.project img,
+.project video {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Nested details */
+.project details { margin: 6px 0; }
+.project details summary {
+    cursor: pointer;
+    font-size: 14px;
+    color: #ff0000;
+    list-style: revert;
 }
 
 /* ---------- Tags ---------- */
+@keyframes tagPulse {
+    0%, 100% { background: #ccffff; border-color: #ff00ff; color: #000; }
+    50%       { background: #ff00ff; border-color: #ccffff; color: #fff; }
+}
+
 .tag {
     display: inline-block;
     border: 2px solid #ff00ff;
     padding: 2px 6px;
-    margin: 2px 4px 2px 0;
-    font-size: 12px;
+    margin: 3px 3px 3px 0;
+    font-size: 11px;
     background: #ccffff;
     color: #000;
+    white-space: nowrap;
+    animation: tagPulse 1.5s ease-in-out infinite;
 }
+
+.tag:nth-child(2n) { animation-delay: 0.3s; }
+.tag:nth-child(3n) { animation-delay: 0.6s; }
+.tag:nth-child(4n) { animation-delay: 0.9s; }
+.tag:nth-child(5n) { animation-delay: 1.2s; }
 
 /* ---------- Footer ---------- */
 footer {
-    margin-top: 60px;
+    margin-top: 48px;
     text-align: center;
     font-size: 12px;
     border-top: 4px groove #00ff00;
     padding-top: 10px;
     background: #ccffcc;
+    box-shadow: 0 0 20px 4px #00ff00;
 }
 
-/* ---------- Decorations / Effects ---------- */
+/* ---------- Sparkle Effect ---------- */
 .spark {
     position: absolute;
-    font-size: 1em;
+    font-size: 1.4em;
     pointer-events: none;
     transform: translate(-50%, -50%);
-    animation: spark-animation 1s ease-out forwards;
-    font-family: 'Alagard', serif;
+    animation: spark-animation 0.9s ease-out forwards;
     color: var(--spark-color);
+    text-shadow: 0 0 6px var(--spark-color);
+    z-index: 9999;
 }
 @keyframes spark-animation {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    100% { opacity: 0; transform: translate(-50%, -150%) scale(0.5); }
+    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+    100% { opacity: 0; transform: translate(-50%, -180%) scale(0.3); }
+}
+
+/* ==============================================
+   RESPONSIVE
+   ============================================== */
+@media (max-width: 560px) {
+    body { padding: 10px; }
+    .projects-container { columns: 1; }
+    h1 { font-size: 22px; }
 }
