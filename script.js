@@ -2,16 +2,6 @@
 // AMBER MILLER — MAXIMUM CHAOS EDITION
 // =============================================
 
-// ---------- Rainbow H1 letters ----------
-function rainbowifyH1() {
-    const h1 = document.querySelector('h1');
-    if (!h1) return;
-    const text = h1.innerText;
-    h1.innerHTML = text.split('').map(ch =>
-        ch === ' ' ? ' ' : `<span class="rainbow-letter">${ch}</span>`
-    ).join('');
-}
-
 // ---------- Inject marquees inside each project card ----------
 function addCardMarquees() {
     const summaries = document.querySelectorAll('.project > summary');
@@ -25,7 +15,7 @@ function addCardMarquees() {
     summaries.forEach((s, i) => {
         const mq = document.createElement('marquee');
         mq.setAttribute('scrollamount', '5');
-        mq.style.cssText = `background:#ff00ff;color:yellow;font-weight:bold;font-size:11px;padding:2px 0;border-top:2px dashed yellow;margin-top:6px;display:block;`;
+        mq.style.cssText = `background:linear-gradient(90deg,#1a0030,#2d0050,#1a0030);color:#ff00ff;font-family:'Share Tech Mono',monospace;font-size:11px;padding:2px 0;border-top:1px solid #cc00ff;margin-top:6px;display:block;letter-spacing:2px;`;
         mq.innerText = msgs[i % msgs.length];
         s.parentElement.insertBefore(mq, s.nextSibling);
     });
@@ -35,28 +25,27 @@ function addCardMarquees() {
 let lastSparkTime = 0;
 let sparkActive = true;
 const symbols = ['✶','★','⚡','💥','✨','🌟','☆','◆','♦','❋','+','˚'];
-const neonColors = ['#ff00ff','#00ffff','#ffff00','#ff0000','#00ff00','#ff7700','#ff00aa','#00aaff'];
+const neonColors = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ff44aa'];
 
 function createSparkle(e) {
+    if (!sparkActive) return;
     const currentTime = Date.now();
-    if (sparkActive == true) {
-        if (currentTime - lastSparkTime > 40) {
-            const x = e.touches ? e.touches[0].pageX : e.pageX;
-            const y = e.touches ? e.touches[0].pageY : e.pageY;
-            const count = Math.random() < 0.4 ? 3 : 1;
-            for (let i = 0; i < count; i++) {
-                const spark = document.createElement('div');
-                spark.className = 'spark';
-                spark.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-                spark.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
-                spark.style.top  = (y + (Math.random() - 0.5) * 30) + 'px';
-                spark.style.setProperty('--spark-color', neonColors[Math.floor(Math.random() * neonColors.length)]);
-                spark.style.fontSize = (0.9 + Math.random() * 1.2) + 'em';
-                document.body.appendChild(spark);
-                setTimeout(() => spark.remove(), 900);
-            }
-            lastSparkTime = currentTime;
+    if (currentTime - lastSparkTime > 40) {
+        const x = e.touches ? e.touches[0].pageX : e.pageX;
+        const y = e.touches ? e.touches[0].pageY : e.pageY;
+        const count = Math.random() < 0.4 ? 3 : 1;
+        for (let i = 0; i < count; i++) {
+            const spark = document.createElement('div');
+            spark.className = 'spark';
+            spark.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+            spark.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
+            spark.style.top  = (y + (Math.random() - 0.5) * 30) + 'px';
+            spark.style.setProperty('--spark-color', neonColors[Math.floor(Math.random() * neonColors.length)]);
+            spark.style.fontSize = (0.9 + Math.random() * 1.2) + 'em';
+            document.body.appendChild(spark);
+            setTimeout(() => spark.remove(), 900);
         }
+        lastSparkTime = currentTime;
     }
 }
 document.addEventListener('mousemove', createSparkle);
@@ -64,7 +53,7 @@ document.addEventListener('touchmove', createSparkle);
 
 // ---------- Pulsing h2 colors ----------
 function animateH2s() {
-    const colors = ['#ff0000','#ff7700','#cc00cc','#0000cc','#007700','#cc6600'];
+    const colors = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35'];
     let idx = 0;
     setInterval(() => {
         document.querySelectorAll('h2').forEach(el => { el.style.color = colors[idx % colors.length]; });
@@ -72,14 +61,17 @@ function animateH2s() {
     }, 600);
 }
 
-// ---------- Cycling card borders ----------
+// ---------- Cycling card borders (no box-shadow — that was causing flashes) ----------
 function cycleBorders() {
     const cards = document.querySelectorAll('.project');
-    const borders = ['#ff00ff','#00ffff','#ffff00','#ff0000','#00ff00','#ff7700'];
+    const borders = ['#ff00ff','#cc00ff','#00fff5','#ff2d78','#ff6ec7','#ff6b35'];
     let i = 0;
     setInterval(() => {
         cards.forEach((card, ci) => {
-            if (!card._zergDead) card.style.borderColor = borders[(i + ci) % borders.length];
+            if (!card._zergDead) {
+                card.style.borderColor = borders[(i + ci) % borders.length];
+                // No box-shadow cycling — it was causing the strobe flash
+            }
         });
         i++;
     }, 400);
@@ -89,9 +81,9 @@ function cycleBorders() {
 // ZERG RUSH MINIGAME
 // =============================================
 
-const ZERGLING_FRAMES = ['ᗤ','ᗣ','ᗡ','ᗢ'];  // rotating zergling glyphs
+const ZERGLING_FRAMES = ['ᗤ','ᗣ','ᗡ','ᗢ'];
 const ZERGLING_COLORS = ['#aa0000','#cc2200','#ff3300','#dd1100'];
-const BITE_CHARS = [' ',' ','·','░'];  // border degradation chars
+const BITE_CHARS = [' ',' ','·','░'];
 
 let zergGameActive = false;
 let zerglings = [];
@@ -101,8 +93,6 @@ let zergScore = 0;
 let zergScoreEl = null;
 let zergBtn = null;
 
-// Each card tracks its border health per side: top, right, bottom, left (0-100)
-// We visualise health by changing border-width and border-style
 const BORDER_STYLES = ['double','solid','dashed','dotted','none'];
 const BORDER_WIDTHS = [6, 5, 4, 3, 2, 1, 0];
 
@@ -117,23 +107,15 @@ function applyBorderDamage(card, side, dmg) {
     const h = getBorderHealth(card);
     h[side] = Math.max(0, h[side] - dmg);
     const hp = h[side];
-
-    // Interpolate border width: 6px at 100hp → 0px at 0hp
     const w = Math.round((hp / 100) * 6);
-    // Style degrades: double → solid → dashed → dotted → none
     const styleIdx = Math.min(BORDER_STYLES.length - 1, Math.floor((1 - hp/100) * BORDER_STYLES.length));
     const style = hp <= 0 ? 'none' : BORDER_STYLES[styleIdx];
-
     card.style[`border-${side}-width`] = w + 'px';
     card.style[`border-${side}-style`] = style;
-
-    // Flash damage colour
     card.style[`border-${side}-color`] = '#ff0000';
     setTimeout(() => {
         if (!card._zergDead) card.style[`border-${side}-color`] = '';
     }, 120);
-
-    // If all sides dead, card "dies"
     if (h.top <= 0 && h.right <= 0 && h.bottom <= 0 && h.left <= 0) {
         destroyCard(card);
     }
@@ -144,8 +126,6 @@ function destroyCard(card) {
     card.style.border = 'none';
     card.style.opacity = '0.35';
     card.style.filter = 'grayscale(1)';
-
-    // Explosion effect
     const rect = card.getBoundingClientRect();
     const cx = rect.left + rect.width/2 + window.scrollX;
     const cy = rect.top + rect.height/2 + window.scrollY;
@@ -162,40 +142,36 @@ function destroyCard(card) {
     }
 }
 
-// ---- Zergling object ----
 function createZergling(targetCard, targetSide) {
     const rect = targetCard.getBoundingClientRect();
     const scrollY = window.scrollY;
     const scrollX = window.scrollX;
-
-    // Spawn off-screen edge matching side
     let startX, startY, targetX, targetY;
-    const margin = 40;
 
     switch (targetSide) {
         case 'top':
             targetX = rect.left + scrollX + Math.random() * rect.width;
             targetY = rect.top  + scrollY;
-            startX  = targetX + (Math.random()-0.5)*60;
-            startY  = targetY - 80 - Math.random()*60;
+            startX  = targetX + (Math.random()-0.5)*240;
+            startY  = 0;
             break;
         case 'bottom':
             targetX = rect.left + scrollX + Math.random() * rect.width;
             targetY = rect.bottom + scrollY;
-            startX  = targetX + (Math.random()-0.5)*60;
-            startY  = targetY + 80 + Math.random()*60;
+            startX  = targetX + (Math.random()-0.5)*240;
+            startY  = screen.height;
             break;
         case 'left':
             targetX = rect.left + scrollX;
             targetY = rect.top  + scrollY + Math.random() * rect.height;
-            startX  = targetX - 80 - Math.random()*60;
-            startY  = targetY + (Math.random()-0.5)*60;
+            startX  = 0;
+            startY  = targetY + (Math.random()-0.5)*240;
             break;
         case 'right':
             targetX = rect.right + scrollX;
             targetY = rect.top   + scrollY + Math.random() * rect.height;
-            startX  = targetX + 80 + Math.random()*60;
-            startY  = targetY + (Math.random()-0.5)*60;
+            startX  = screen.width;
+            startY  = targetY + (Math.random()-0.5)*240;
             break;
     }
 
@@ -217,25 +193,15 @@ function createZergling(targetCard, targetSide) {
     `;
     document.body.appendChild(el);
 
-    // Click to kill
+    const zl = {
+        el, x: startX, y: startY, tx: targetX, ty: targetY,
+        card: targetCard, side: targetSide,
+        speed: 0.8 + Math.random() * 1.0,
+        frame: 0, frameTimer: 0,
+        state: 'moving', attackTimer: 0, hp: 1,
+    };
     el.addEventListener('click', () => killZergling(zl));
     el.addEventListener('touchstart', (e) => { e.preventDefault(); killZergling(zl); });
-
-    const zl = {
-        el,
-        x: startX,
-        y: startY,
-        tx: targetX,
-        ty: targetY,
-        card: targetCard,
-        side: targetSide,
-        speed: 0.8 + Math.random() * 1.0,
-        frame: 0,
-        frameTimer: 0,
-        state: 'moving',   // 'moving' | 'attacking' | 'dead'
-        attackTimer: 0,
-        hp: 1,
-    };
     zerglings.push(zl);
     return zl;
 }
@@ -262,19 +228,15 @@ function updateScore() {
 function tickZerg() {
     zerglings.forEach(zl => {
         if (zl.state === 'dead') return;
-
-        // Animate frame
         zl.frameTimer++;
         if (zl.frameTimer % 8 === 0) {
             zl.frame = (zl.frame + 1) % ZERGLING_FRAMES.length;
             if (zl.state === 'moving') zl.el.innerText = ZERGLING_FRAMES[zl.frame];
         }
-
         if (zl.state === 'moving') {
             const dx = zl.tx - zl.x;
             const dy = zl.ty - zl.y;
             const dist = Math.sqrt(dx*dx + dy*dy);
-
             if (dist < 6) {
                 zl.state = 'attacking';
                 zl.el.innerText = '⚔';
@@ -286,22 +248,16 @@ function tickZerg() {
             }
         } else if (zl.state === 'attacking') {
             zl.attackTimer++;
-            // Shake while attacking
             const shake = (Math.random()-0.5)*3;
             zl.el.style.left = (zl.tx + shake) + 'px';
             zl.el.style.top  = (zl.ty + shake) + 'px';
-
-            // Deal damage every 20 ticks (~0.33s at 60fps)
             if (zl.attackTimer % 20 === 0) {
                 if (!zl.card._zergDead) {
                     applyBorderDamage(zl.card, zl.side, 8 + Math.random()*4);
                 } else {
-                    // Card already dead, pick a new target
                     reassignZergling(zl);
                 }
             }
-
-            // Alternate attack glyphs
             if (zl.attackTimer % 10 === 0) {
                 zl.el.innerText = zl.attackTimer % 20 < 10 ? '⚔' : '🗡';
             }
@@ -316,25 +272,22 @@ function reassignZergling(zl) {
     const sides = ['top','right','bottom','left'];
     const side  = sides[Math.floor(Math.random() * sides.length)];
     const rect  = card.getBoundingClientRect();
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-    zl.card = card;
-    zl.side = side;
+    const scrollY = window.scrollY, scrollX = window.scrollX;
+    zl.card = card; zl.side = side;
     switch (side) {
         case 'top':    zl.tx = rect.left+scrollX+Math.random()*rect.width; zl.ty = rect.top+scrollY; break;
         case 'bottom': zl.tx = rect.left+scrollX+Math.random()*rect.width; zl.ty = rect.bottom+scrollY; break;
         case 'left':   zl.tx = rect.left+scrollX; zl.ty = rect.top+scrollY+Math.random()*rect.height; break;
         case 'right':  zl.tx = rect.right+scrollX; zl.ty = rect.top+scrollY+Math.random()*rect.height; break;
     }
-    zl.state = 'moving';
-    zl.attackTimer = 0;
+    zl.state = 'moving'; zl.attackTimer = 0;
 }
 
 function spawnWave() {
     const cards = Array.from(document.querySelectorAll('.project')).filter(c => !c._zergDead);
     if (cards.length === 0) { endZergRush(); return; }
     const sides = ['top','right','bottom','left'];
-    const count = 2 + Math.floor(Math.random() * 3); // 2-4 per wave
+    const count = 2 + Math.floor(Math.random() * 3);
     for (let i = 0; i < count; i++) {
         const card = cards[Math.floor(Math.random() * cards.length)];
         const side = sides[Math.floor(Math.random() * sides.length)];
@@ -342,14 +295,30 @@ function spawnWave() {
     }
 }
 
+function addZergOverlay() {
+    const overlay = document.createElement('div');
+    overlay.id = 'zerg-overlay';
+    overlay.style.cssText = `position:fixed;inset:0;z-index:9999;background:transparent;cursor:crosshair;`;
+    overlay.addEventListener('click', (e) => {
+        overlay.style.display = 'none';
+        const real = document.elementFromPoint(e.clientX, e.clientY);
+        overlay.style.display = '';
+        if (real && real.tagName === 'SUMMARY') {
+            real.closest('details').toggleAttribute('open');
+        }
+    });
+    document.body.appendChild(overlay);
+}
+
 function startZergRush() {
     if (zergGameActive) { endZergRush(); return; }
     zergGameActive = true;
+    sparkActive = false;
+    addZergOverlay();
     zergScore = 0;
     zerglings = [];
-    sparkActive = false;
+    let waveNum = 0;
 
-    // Reset card borders
     document.querySelectorAll('.project').forEach(card => {
         card._borderHealth = { top: 100, right: 100, bottom: 100, left: 100 };
         card._zergDead = false;
@@ -358,35 +327,23 @@ function startZergRush() {
         card.style.border = '';
     });
 
-    // Score display
     zergScoreEl = document.createElement('div');
     zergScoreEl.id = 'zerg-score';
     zergScoreEl.style.cssText = `
-        position: fixed;
-        top: 10px;
-        right: 14px;
-        background: #000;
-        color: #ff0000;
-        font-family: "Comic Sans MS", monospace;
-        font-size: 16px;
-        font-weight: bold;
-        padding: 6px 12px;
-        border: 3px solid #ff0000;
-        z-index: 99999;
-        text-shadow: 0 0 6px #ff0000;
-        pointer-events: none;
+        position:fixed;top:10px;right:14px;background:#000;color:#ff0000;
+        font-family:"Comic Sans MS",monospace;font-size:16px;font-weight:bold;
+        padding:6px 12px;border:3px solid #ff0000;z-index:99999;
+        text-shadow:0 0 6px #ff0000;pointer-events:none;
     `;
     zergScoreEl.innerText = '☠ KILLS: 0';
     document.body.appendChild(zergScoreEl);
 
-    // Instruction flash
     const msg = document.createElement('div');
     msg.style.cssText = `
         position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
         background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;
-        font-size:28px;font-weight:bold;padding:20px 32px;
-        border:4px solid #ff0000;z-index:99999;text-align:center;
-        text-shadow:0 0 10px #ff0000;pointer-events:none;
+        font-size:28px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;
+        z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;pointer-events:none;
     `;
     msg.innerHTML = '🐞 ZERG RUSH! 🐞<br><span style="font-size:16px">CLICK THE ZERGLINGS TO KILL THEM!</span>';
     document.body.appendChild(msg);
@@ -396,10 +353,12 @@ function startZergRush() {
     zergBtn.style.background = '#ff0000';
     zergBtn.style.color = '#fff';
 
-    // Spawn initial wave then every 2.5s
     spawnWave();
-    zergSpawnInterval = setInterval(spawnWave, 2500);
-    zergInterval     = setInterval(tickZerg, 16);
+    zergSpawnInterval = setInterval(function() {
+        spawnWave();
+        waveNum += 1;
+    }, 5000 - 250 * waveNum);
+    zergInterval = setInterval(tickZerg, 16);
 }
 
 function endZergRush() {
@@ -407,21 +366,19 @@ function endZergRush() {
     sparkActive = true;
     clearInterval(zergInterval);
     clearInterval(zergSpawnInterval);
+    const overlay = document.getElementById('zerg-overlay');
+    if (overlay) overlay.remove();
 
-    // Kill all remaining zerglings
     zerglings.forEach(zl => { if (zl.el.parentNode) zl.el.remove(); });
     zerglings = [];
 
-    // Final score
     if (zergScoreEl) {
-        zergScoreEl.style.pointerEvents = 'none';
         const final = document.createElement('div');
         final.style.cssText = `
             position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
             background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;
-            font-size:24px;font-weight:bold;padding:20px 32px;
-            border:4px solid #ff0000;z-index:99999;text-align:center;
-            text-shadow:0 0 10px #ff0000;
+            font-size:24px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;
+            z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;
         `;
         final.innerHTML = `🐞 RUSH OVER 🐞<br>KILLS: ${zergScore}<br><span style="font-size:14px;cursor:pointer;color:#ffff00" id="zerg-close">[ CLOSE ]</span>`;
         document.body.appendChild(final);
@@ -430,57 +387,527 @@ function endZergRush() {
         setTimeout(() => { if (zergScoreEl && zergScoreEl.parentNode) zergScoreEl.remove(); }, 4000);
     }
 
-    // Restore cards
     document.querySelectorAll('.project').forEach(card => {
         card._borderHealth = undefined;
         card._zergDead = false;
         card.style.opacity = '';
         card.style.filter = '';
         card.style.border = '';
-        card.style.borderTopWidth    = '';
-        card.style.borderRightWidth  = '';
-        card.style.borderBottomWidth = '';
-        card.style.borderLeftWidth   = '';
-        card.style.borderTopStyle    = '';
-        card.style.borderRightStyle  = '';
-        card.style.borderBottomStyle = '';
-        card.style.borderLeftStyle   = '';
+        ['Top','Right','Bottom','Left'].forEach(s => {
+            card.style[`border${s}Width`] = '';
+            card.style[`border${s}Style`] = '';
+        });
     });
 
     zergBtn.innerText = '🐞 ZERG RUSH';
-    zergBtn.style.background = '#000';
-    zergBtn.style.color = '#00ff00';
+    zergBtn.style.background = '#0d0010';
+    zergBtn.style.color = '#ff00ff';
 }
 
 function addZergButton() {
     zergBtn = document.createElement('button');
     zergBtn.innerText = '🐞 ZERG RUSH';
     zergBtn.style.cssText = `
-        position: fixed;
-        bottom: 18px;
-        left: 18px;
-        z-index: 99998;
-        background: #000;
-        color: #00ff00;
-        font-family: "Comic Sans MS", monospace;
-        font-size: 15px;
-        font-weight: bold;
-        padding: 10px 18px;
-        border: 3px solid #00ff00;
-        cursor: pointer;
-        text-shadow: 0 0 6px #00ff00;
-        box-shadow: 0 0 12px #00ff00;
-        letter-spacing: 1px;
+        position:fixed;bottom:18px;left:18px;z-index:99998;
+        background:#0d0010;color:#ff00ff;font-family:"Comic Sans MS",monospace;
+        font-size:15px;font-weight:bold;padding:10px 18px;
+        border:2px solid #ff00ff;cursor:pointer;
+        text-shadow:0 0 8px #ff00ff;box-shadow:0 0 15px rgba(255,0,255,0.4);
+        letter-spacing:1px;
     `;
     zergBtn.addEventListener('click', startZergRush);
     document.body.appendChild(zergBtn);
 }
 
+function addHideButton() {
+    const btn = document.createElement('button');
+    btn.innerText = '🙈 HIDE PROJECTS';
+    btn.style.cssText = `
+        position:fixed;bottom:70px;left:18px;z-index:99998;
+        background:#0d0010;color:#cc00ff;font-family:"Comic Sans MS",monospace;
+        font-size:15px;font-weight:bold;padding:10px 18px;
+        border:2px solid #cc00ff;cursor:pointer;
+        text-shadow:0 0 8px #cc00ff;box-shadow:0 0 15px rgba(204,0,255,0.4);
+        letter-spacing:1px;
+    `;
+    let hidden = false;
+    btn.addEventListener('click', () => {
+        hidden = !hidden;
+        document.querySelectorAll('.project').forEach(p => {
+            p.style.visibility = hidden ? 'hidden' : '';
+        });
+        btn.innerText = hidden ? '👁 SHOW PROJECTS' : '🙈 HIDE PROJECTS';
+        btn.style.color = hidden ? '#00fff5' : '#cc00ff';
+        btn.style.borderColor = hidden ? '#00fff5' : '#cc00ff';
+        btn.style.textShadow = hidden ? '0 0 8px #00fff5' : '0 0 8px #cc00ff';
+        btn.style.boxShadow = hidden ? '0 0 15px rgba(0,255,245,0.4)' : '0 0 15px rgba(204,0,255,0.4)';
+    });
+    document.body.appendChild(btn);
+}
+
 // ---------- Boot ----------
 document.addEventListener('DOMContentLoaded', () => {
-    rainbowifyH1();
     addCardMarquees();
     animateH2s();
     cycleBorders();
     addZergButton();
+    addHideButton();
 });
+
+// =============================================
+// COSMIC AQUATIC ECOSYSTEM
+// =============================================
+
+(function() {
+
+const canvas = document.createElement('canvas');
+canvas.id = 'ecosystem-canvas';
+canvas.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;`;
+document.addEventListener('DOMContentLoaded', () => document.body.prepend(canvas));
+
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+}
+window.addEventListener('load', resize);
+window.addEventListener('resize', resize);
+
+const rnd   = (a,b) => a + Math.random()*(b-a);
+const pick  = arr  => arr[Math.floor(Math.random()*arr.length)];
+const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+const PALETTE = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ffffaa','#aaffff'];
+
+// ---- Stars ----
+class Star {
+    constructor() { this.reset(true); }
+    reset(init) {
+        this.x = rnd(0, W||1200); this.y = rnd(0, H||800);
+        this.r = rnd(0.3, 1.8); this.spd = rnd(0.02, 0.15);
+        this.dir = rnd(0, Math.PI*2); this.twinkle = rnd(0,Math.PI*2);
+        this.twinkleSpd = rnd(0.02,0.05);
+        this.color = pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']);
+    }
+    update() {
+        this.x += Math.cos(this.dir)*this.spd;
+        this.y += Math.sin(this.dir)*this.spd;
+        this.twinkle += this.twinkleSpd;
+        if(this.x<-5||this.x>W+5||this.y<-5||this.y>H+5) this.reset(false);
+    }
+    draw() {
+        const alpha = 0.4 + 0.5*Math.sin(this.twinkle);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = this.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.r, 0, Math.PI*2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+// ---- Planets ----
+class Planet {
+    constructor() { this.reset(true); }
+    reset(init) {
+        this.r = rnd(18,52);
+        this.x = init ? rnd(0,W||1200) : (Math.random()<0.5 ? -this.r-10 : (W||1200)+this.r+10);
+        this.y = rnd(this.r,(H||800)-this.r);
+        this.spd = rnd(0.04,0.2);
+        this.dx = (this.x<0?1:-1)*this.spd; this.dy = rnd(-0.04,0.04);
+        this.color = pick(PALETTE); this.color2 = pick(PALETTE);
+        this.rings = Math.random()<0.4; this.ringTilt = rnd(0.2,0.6);
+        this.rot = rnd(0,Math.PI*2); this.rotSpd = rnd(-0.004,0.004);
+        this.grav = this.r*7; this.mass = this.r*0.5;
+    }
+    update() {
+        this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd;
+        if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false);
+    }
+    draw() {
+        ctx.save(); ctx.translate(this.x,this.y);
+        // Soft glow — no shadowBlur, use radial gradient instead
+        const grd = ctx.createRadialGradient(0,0,this.r*0.5,0,0,this.r*2);
+        grd.addColorStop(0,this.color+'22'); grd.addColorStop(1,'transparent');
+        ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(0,0,this.r*2,0,Math.PI*2); ctx.fill();
+        // Body
+        const bg = ctx.createRadialGradient(-this.r*0.3,-this.r*0.3,this.r*0.1,0,0,this.r);
+        bg.addColorStop(0,'#ffffff33'); bg.addColorStop(0.4,this.color); bg.addColorStop(1,this.color2);
+        ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+        if(this.rings) {
+            ctx.save(); ctx.scale(1,this.ringTilt);
+            ctx.strokeStyle=this.color+'88'; ctx.lineWidth=this.r*0.16;
+            ctx.beginPath(); ctx.arc(0,0,this.r*1.55,0,Math.PI*2); ctx.stroke();
+            ctx.restore();
+        }
+        ctx.restore();
+    }
+}
+
+// ---- Galaxies ----
+class Galaxy {
+    constructor() { this.reset(true); }
+    reset(init) {
+        this.r = rnd(40,100);
+        this.x = init ? rnd(0,W||1200) : (Math.random()<0.5 ? -this.r-20 : (W||1200)+this.r+20);
+        this.y = rnd(this.r,(H||800)-this.r);
+        this.spd = rnd(0.01,0.07); this.dx = (this.x<0?1:-1)*this.spd;
+        this.rot = rnd(0,Math.PI*2); this.rotSpd = rnd(-0.002,0.002);
+        this.arms = Math.floor(rnd(2,5));
+        this.color = pick(PALETTE); this.color2 = pick(PALETTE);
+        this.grav = this.r*6; this.mass = this.r*0.3;
+    }
+    update() {
+        this.x+=this.dx; this.rot+=this.rotSpd;
+        if(this.x<-this.r-80||this.x>W+this.r+80) this.reset(false);
+    }
+    draw() {
+        ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
+        const cg = ctx.createRadialGradient(0,0,0,0,0,this.r*0.4);
+        cg.addColorStop(0,'#ffffff66'); cg.addColorStop(0.3,this.color+'99'); cg.addColorStop(1,'transparent');
+        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,this.r*0.4,0,Math.PI*2); ctx.fill();
+        for(let a=0;a<this.arms;a++) {
+            ctx.save(); ctx.rotate((Math.PI*2/this.arms)*a);
+            const ag = ctx.createLinearGradient(0,0,this.r,0);
+            ag.addColorStop(0,this.color+'88'); ag.addColorStop(1,'transparent');
+            ctx.strokeStyle=ag; ctx.lineWidth=this.r*0.15;
+            ctx.beginPath(); ctx.moveTo(0,0);
+            for(let t=0;t<1;t+=0.03){
+                const ang=t*Math.PI*1.5, rad=t*this.r;
+                ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad);
+            }
+            ctx.stroke(); ctx.restore();
+        }
+        ctx.restore();
+    }
+}
+
+// =====================
+// CREATURES
+// =====================
+let generationCount = 0;
+const SPECIES_DEFS = {
+    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0],sense:60, reproduce:0.008},
+    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8],sense:80, reproduce:0.007},
+    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5],sense:40, reproduce:0.009},
+    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4],sense:120,reproduce:0.004},
+    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9],sense:100,reproduce:0.004},
+    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[28,50], speed:[0.2,0.6],sense:160,reproduce:0.0015},
+};
+
+let creatures = [];
+let evoLog = [];
+
+function spawnCreature(speciesKey, x, y, parent) {
+    const def = SPECIES_DEFS[speciesKey];
+    const mutate = (v,range) => parent ? clamp(v+rnd(-range*2,range*2),range*0.05,range*25) : v;
+    return {
+        species:speciesKey, diet:def.diet,
+        x:x??rnd(50,W-50), y:y??rnd(50,H-50),
+        vx:rnd(-0.5,0.5), vy:rnd(-0.5,0.5),
+        size:      parent?mutate(parent.size,1.2)      :rnd(def.size[0],  def.size[1]),
+        speed:     parent?mutate(parent.speed,0.08)    :rnd(def.speed[0], def.speed[1]),
+        sense:     parent?mutate(parent.sense,6)       :def.sense,
+        reproduce: parent?clamp(parent.reproduce+rnd(-0.0005,0.0008),0.0001,0.02):def.reproduce,
+        color:     parent?mutateColor(parent.color)    :def.baseColor,
+        energy:200, age:0, maxAge:rnd(2000,6000), reproduced:false,
+        frame:Math.random()*Math.PI*2, generation:parent?parent.generation+1:0,
+        _wanderAngle:Math.random()*Math.PI*2, _scared:0,
+    };
+}
+
+function mutateColor(hex) {
+    const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+    return '#'+[r,g,b].map(v=>clamp(v+Math.floor(rnd(-25,25)),0,255).toString(16).padStart(2,'0')).join('');
+}
+
+function initCreatures() {
+    Object.keys(SPECIES_DEFS).forEach(k => {
+        const n = k==='leviathan'?2:k==='shark'||k==='anglerfish'?5:10;
+        for(let i=0;i<n;i++) creatures.push(spawnCreature(k));
+    });
+}
+
+// ---- Drawing ----
+function drawCreature(c) {
+    if(c._scared>0) c._scared--;
+    ctx.save();
+    ctx.translate(c.x,c.y);
+    ctx.rotate(Math.atan2(c.vy,c.vx));
+    const s=c.size;
+    c.frame += 0.05*c.speed*(c._scared>0?2:1);
+    const w=Math.sin(c.frame)*s*0.15;
+    ctx.globalAlpha = clamp(c.energy/120,0.3,1.0);
+    // Use gradient glow instead of shadowBlur for performance
+    ctx.fillStyle = c._scared>0 ? '#ffffff' : c.color;
+    switch(c.species) {
+        case 'jellyfish':  drawJellyfish(c,s,w); break;
+        case 'manta':      drawManta(c,s,w); break;
+        case 'seahorse':   drawSeahorse(c,s,w); break;
+        case 'shark':      drawShark(c,s,w); break;
+        case 'anglerfish': drawAnglerfish(c,s,w); break;
+        case 'leviathan':  drawLeviathan(c,s,w); break;
+    }
+    ctx.restore();
+}
+
+function drawJellyfish(c,s,w) {
+    ctx.fillStyle=c.color+'99';
+    ctx.beginPath(); ctx.ellipse(0,0,s*0.7,s*0.5,0,Math.PI,0); ctx.fill();
+    ctx.fillStyle=c.color+'44';
+    ctx.beginPath(); ctx.ellipse(0,0,s*0.7,s*0.5,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1;
+    for(let i=-2;i<=2;i++){
+        ctx.beginPath(); ctx.moveTo(i*s*0.15,s*0.5);
+        ctx.quadraticCurveTo(i*s*0.2+w,s+w,i*s*0.1,s*1.3+Math.abs(w)); ctx.stroke();
+    }
+}
+function drawManta(c,s,w) {
+    ctx.fillStyle=c.color+'cc';
+    ctx.beginPath(); ctx.moveTo(s*0.8,0);
+    ctx.quadraticCurveTo(0,-s*0.5+w,-s*0.8,0);
+    ctx.quadraticCurveTo(0,s*0.3-w,s*0.8,0); ctx.fill();
+    ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(-s*0.8,0);
+    ctx.quadraticCurveTo(-s*1.0,w*0.5,-s*1.3,w); ctx.stroke();
+}
+function drawSeahorse(c,s,w) {
+    ctx.strokeStyle=c.color; ctx.lineWidth=s*0.22; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,-s*0.6);
+    ctx.quadraticCurveTo(s*0.3,0,w*0.3,s*0.4);
+    ctx.quadraticCurveTo(-s*0.3,s*0.7,0,s*0.8); ctx.stroke();
+    ctx.fillStyle=c.color; ctx.beginPath();
+    ctx.ellipse(s*0.1,-s*0.6,s*0.2,s*0.14,0.5,0,Math.PI*2); ctx.fill();
+}
+function drawShark(c,s,w) {
+    ctx.fillStyle=c.color+'cc';
+    ctx.beginPath(); ctx.moveTo(s,0);
+    ctx.quadraticCurveTo(0,-s*0.25+w*0.2,-s,0);
+    ctx.quadraticCurveTo(0,s*0.2-w*0.2,s,0); ctx.fill();
+    ctx.fillStyle=c.color;
+    ctx.beginPath(); ctx.moveTo(0,-s*0.18); ctx.lineTo(-s*0.1,-s*0.5); ctx.lineTo(-s*0.25,-s*0.18); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(-s*1.3+w,-s*0.3); ctx.lineTo(-s*1.3-w,s*0.3); ctx.fill();
+}
+function drawAnglerfish(c,s,w) {
+    ctx.fillStyle=c.color+'bb';
+    ctx.beginPath(); ctx.ellipse(0,0,s*0.8,s*0.6,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=c.color+'88'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(s*0.6,-s*0.3);
+    ctx.quadraticCurveTo(s*1.0,-s*0.8+w,s*0.9,-s*0.9); ctx.stroke();
+    ctx.fillStyle='#ffffaa';
+    ctx.beginPath(); ctx.arc(s*0.9,-s*0.9,s*0.1,0,Math.PI*2); ctx.fill();
+}
+function drawLeviathan(c,s,w) {
+    ctx.fillStyle=c.color+'99';
+    ctx.beginPath(); ctx.moveTo(s,0);
+    ctx.bezierCurveTo(s*0.3,-s*0.4+w,-s*0.3,s*0.4-w,-s,0);
+    ctx.bezierCurveTo(-s*0.3,s*0.3,s*0.3,-s*0.3,s,0); ctx.fill();
+    ctx.fillStyle='#ffffff';
+    ctx.beginPath(); ctx.arc(s*0.7,-s*0.1,s*0.07,0,Math.PI*2); ctx.fill();
+}
+
+// ---- AI ----
+function updateCreature(c, planets, galaxies, stars) {
+    c.age++;
+    const drainMult = c.reproduced ? 1.0 : 0.08;
+    c.energy -= (0.012 + c.size*0.0003) * drainMult;
+    c.energy += 0.35; // ambient baseline
+    if(c.age>c.maxAge||c.energy<=0) return false;
+
+    let desiredX=c.vx, desiredY=c.vy, dominated=false;
+
+    // Scared: keep current heading, skip AI
+    if(c._scared>0) {
+        c._wanderAngle = Math.atan2(c.vy,c.vx);
+    } else {
+        // Flee nearest threat
+        if(c.diet==='herb'||c.diet==='carn') {
+            let nDist=Infinity, threat=null;
+            creatures.forEach(t=>{
+                if(t===c||t._dead) return;
+                const is=(c.diet==='herb'&&(t.diet==='carn'||t.diet==='apex'))||(c.diet==='carn'&&t.diet==='apex');
+                if(!is) return;
+                const dx=c.x-t.x,dy=c.y-t.y,d=Math.sqrt(dx*dx+dy*dy);
+                if(d<c.sense*1.5&&d<nDist){nDist=d;threat={dx,dy,d};}
+            });
+            if(threat){desiredX=threat.dx/threat.d*c.speed;desiredY=threat.dy/threat.d*c.speed;dominated=true;}
+        }
+        // Hunt nearest prey
+        if(!dominated&&(c.diet==='carn'||c.diet==='apex')) {
+            let nDist=Infinity,prey=null;
+            creatures.forEach(p=>{
+                if(p===c||p._dead) return;
+                const is=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn'));
+                if(!is) return;
+                const dx=p.x-c.x,dy=p.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
+                if(d<c.sense&&d<nDist){nDist=d;prey={dx,dy,d,p};}
+            });
+            if(prey){
+                desiredX=prey.dx/prey.d*c.speed;desiredY=prey.dy/prey.d*c.speed;dominated=true;
+                if(prey.d<c.size+prey.p.size){c.energy+=prey.p.size*8;prey.p._dead=true;}
+            }
+            [...planets,...galaxies].forEach(obj=>{
+                const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy);
+                if(dist<obj.r*1.8){desiredX-=(dx/dist)*c.speed;desiredY-=(dy/dist)*c.speed;dominated=true;}
+            });
+        }
+        // Herbivores orbit celestial
+        if(!dominated&&c.diet==='herb') {
+            let best=null,bestScore=Infinity;
+            [...planets,...galaxies].forEach(obj=>{
+                const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy);
+                const score=Math.abs(dist-obj.r*1.6);
+                if(dist<obj.grav&&score<bestScore){bestScore=score;best={dx,dy,dist,obj};}
+                if(dist<obj.r*1.2) c.energy-=0.4;
+                else if(dist<obj.r*3.0) c.energy+=1.4;
+            });
+            if(best){
+                const orb=best.obj.r*1.6;
+                if(best.dist<orb*0.85){desiredX=-(best.dx/best.dist)*c.speed;desiredY=-(best.dy/best.dist)*c.speed;}
+                else{desiredX=(best.dx/best.dist)*c.speed;desiredY=(best.dy/best.dist)*c.speed;}
+                dominated=true;
+            }
+            stars.forEach(s=>{
+                const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
+                if(d<50) c.energy+=0.2;
+            });
+        }
+        // Wander
+        if(!dominated){
+            c._wanderAngle+=clamp(rnd(-0.03,0.03),-0.025,0.025);
+            desiredX=Math.cos(c._wanderAngle)*c.speed;
+            desiredY=Math.sin(c._wanderAngle)*c.speed;
+        }
+    }
+
+    // Smooth steer with max turn rate
+    if(c._scared<=0){
+        const maxTurn=0.015;
+        c.vx+=clamp((desiredX-c.vx)*0.025,-maxTurn,maxTurn);
+        c.vy+=clamp((desiredY-c.vy)*0.025,-maxTurn,maxTurn);
+    }
+    const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
+    const maxSpd = c._scared>0 ? c.speed*3.5 : c.speed;
+    if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
+    // Gradually bleed off scared speed back to normal
+    if(c._scared>0){c.vx*=0.97;c.vy*=0.97;}
+    if(spd<0.05&&c._scared<=0){c.vx+=rnd(-0.04,0.04);c.vy+=rnd(-0.04,0.04);}
+
+    // Boundary
+    const pad=80;
+    if(c.x<pad)c.vx+=0.05;if(c.x>W-pad)c.vx-=0.05;
+    if(c.y<pad)c.vy+=0.05;if(c.y>H-pad)c.vy-=0.05;
+
+    c.x+=c.vx; c.y+=c.vy;
+
+    // Reproduce
+    if(c.energy>55&&Math.random()<c.reproduce&&creatures.length<280){
+        c.reproduced=true;
+        c.energy*=0.65;
+        const child=spawnCreature(c.species,c.x+rnd(-20,20),c.y+rnd(-20,20),c);
+        creatures.push(child);
+        if(child.generation>generationCount){
+            generationCount=child.generation;
+            if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`);
+        }
+    }
+    c.energy=clamp(c.energy,0,200);
+    return true;
+}
+
+// ---- HUD ----
+function drawHUD() {
+    const counts={};
+    creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
+    ctx.save();
+    ctx.shadowBlur=0;
+    ctx.font='11px Share Tech Mono,monospace';
+    let y=18;
+    Object.entries(counts).forEach(([sp,n])=>{
+        ctx.globalAlpha=0.75;
+        ctx.fillStyle=SPECIES_DEFS[sp].baseColor;
+        ctx.fillText(`${sp}: ${n}`,10,y); y+=14;
+    });
+    if(generationCount>0){
+        ctx.fillStyle='#dd88ff';
+        ctx.fillText(`max gen: ${generationCount}`,10,y+2);
+    }
+    ctx.globalAlpha=1;
+    ctx.restore();
+}
+
+// ---- Click to scare ----
+function initClickScare() {
+    canvas.style.pointerEvents='auto';
+    canvas.addEventListener('click',(e)=>{
+        const rect=canvas.getBoundingClientRect();
+        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+        let hit=false;
+        creatures.forEach(c=>{
+            const dx=c.x-mx, dy=c.y-my, d=Math.sqrt(dx*dx+dy*dy);
+            if(d<c.size*5+35 && d>0) {
+                hit=true;
+                // Directly set velocity away from click, scaled by proximity
+                const force = clamp((c.size*2.5+20-d)/(c.size*2.5+20), 0.2, 1.0);
+                const angle = Math.atan2(dy,dx);
+                // Add random spread so nearby creatures fan out, not clump
+                const spread = rnd(-0.6, 0.6);
+                c.vx = Math.cos(angle+spread) * c.speed * 3.5 * force;
+                c.vy = Math.sin(angle+spread) * c.speed * 3.5 * force;
+                c._wanderAngle = angle + spread;
+                c._scared = 80;
+            }
+        });
+    });
+}
+
+// ---- Init ----
+const stars   = Array.from({length:140}, ()=>new Star());
+const planets = Array.from({length:5},   ()=>new Planet());
+const galaxies= Array.from({length:2},   ()=>new Galaxy());
+
+window.addEventListener('load',()=>{
+    resize();
+    initCreatures();
+    initClickScare();
+    loop();
+});
+
+let frameCount=0;
+function loop() {
+    requestAnimationFrame(loop);
+    if(!W||!H) return;
+    frameCount++;
+    ctx.clearRect(0,0,W,H);
+    ctx.shadowBlur=0;
+
+    // Stars every other frame
+    if(frameCount%2===0) stars.forEach(s=>s.update());
+    stars.forEach(s=>s.draw());
+
+    galaxies.forEach(g=>{g.update();g.draw();});
+    planets.forEach(p=>{p.update();p.draw();});
+    ctx.shadowBlur=0;
+
+    creatures=creatures.filter(c=>{
+        if(c._dead) return false;
+        return updateCreature(c,planets,galaxies,stars);
+    });
+    Object.keys(SPECIES_DEFS).forEach(k=>{
+        if(!creatures.some(c=>c.species===k)){
+            const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4;
+            for(let i=0;i<n;i++) creatures.push(spawnCreature(k));
+        }
+    });
+
+    ctx.shadowBlur=0;
+    creatures.forEach(c=>drawCreature(c));
+    ctx.shadowBlur=0;
+    ctx.globalAlpha=1;
+
+    drawHUD();
+}
+
+})();
