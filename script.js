@@ -765,9 +765,15 @@ function updateCreature(c, planets, galaxies, stars) {
             });
             if(best){
                 const orb=best.obj.r*1.6;
-                if(best.dist<orb*0.85){desiredX=-(best.dx/best.dist)*c.speed;desiredY=-(best.dy/best.dist)*c.speed;}
-                else{desiredX=(best.dx/best.dist)*c.speed;desiredY=(best.dy/best.dist)*c.speed;}
-                dominated=true;
+                const diff=best.dist-orb;
+                // Only steer if meaningfully outside deadband (20% of orbit radius)
+                if(Math.abs(diff)>orb*0.2){
+                    const dir=diff>0?1:-1;
+                    desiredX=(best.dx/best.dist)*dir*c.speed;
+                    desiredY=(best.dy/best.dist)*dir*c.speed;
+                    dominated=true;
+                }
+                // Inside deadband: just wander freely, energy still flows
             }
             }
         // Stars feed herbivores regardless of other AI state
@@ -877,6 +883,7 @@ window.addEventListener('load',()=>{
 });
 
 let frameCount=0;
+const GEN_INTERVAL = 3600; // ~60s at 60fps
 function loop() {
     requestAnimationFrame(loop);
     if(!W||!H) return;
@@ -896,6 +903,22 @@ function loop() {
         if(c._dead) return false;
         return updateCreature(c,planets,galaxies,stars);
     });
+
+    // Generational pulse: every ~60s, creatures that haven't reproduced get a forced chance
+    if(frameCount % GEN_INTERVAL === 0 && frameCount > 0) {
+        const eligible = creatures.filter(c => !c.reproduced && c.energy > 40 && creatures.length < 280);
+        eligible.forEach(c => {
+            c.reproduced = true;
+            const child = spawnCreature(c.species, c.x+rnd(-30,30), c.y+rnd(-30,30), c);
+            creatures.push(child);
+            if(child.generation > generationCount) {
+                generationCount = child.generation;
+                if(evoLog.length < 20) evoLog.push(`Gen ${child.generation}: ${child.species}`);
+            }
+        });
+        // Also boost energy of all survivors to keep population healthy
+        creatures.forEach(c => { c.energy = Math.min(c.energy + 60, 200); });
+    }
     Object.keys(SPECIES_DEFS).forEach(k=>{
         if(!creatures.some(c=>c.species===k)){
             const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4;
