@@ -769,11 +769,12 @@ function updateCreature(c, planets, galaxies, stars) {
                 else{desiredX=(best.dx/best.dist)*c.speed;desiredY=(best.dy/best.dist)*c.speed;}
                 dominated=true;
             }
-            stars.forEach(s=>{
-                const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<50) c.energy+=0.2;
-            });
-        }
+            }
+        // Stars feed herbivores regardless of other AI state
+        stars.forEach(s=>{
+            const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
+            if(d<80) c.energy+=0.4;
+        });
         // Wander
         if(!dominated){
             c._wanderAngle+=clamp(rnd(-0.03,0.03),-0.025,0.025);
