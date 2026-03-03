@@ -1,184 +1,217 @@
 /* =============================================
-   AMBER MILLER — ENGINEERING PORTFOLIO
-   MAXIMUM CHAOS EDITION
+   AMBER MILLER — VAPORWAVE DARK EDITION
    ============================================= */
 
-*, *::before, *::after {
-    box-sizing: border-box;
+@import url('https://fonts.googleapis.com/css2?family=VT323&family=Share+Tech+Mono&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+    --bg:       #0d0010;
+    --bg2:      #130020;
+    --card:     #1a0028;
+    --accent1:  #ff00ff;
+    --accent2:  #cc00ff;
+    --accent3:  #ff6ec7;
+    --cyan:     #00fff5;
+    --sunset1:  #ff6b35;
+    --sunset2:  #ff2d78;
+    --text:     #e8d5f5;
+    --textdim:  #9b7db5;
+    --grid:     rgba(180,0,255,0.12);
 }
 
-/* Animated rainbow background */
-@keyframes rainbowBg {
-    0%   { background-position: 0% 50%; }
-    50%  { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+@keyframes bgPulse {
+    0%,100% { background-position: 0% 50%; }
+    50%      { background-position: 100% 50%; }
 }
 
 body {
-    background: linear-gradient(270deg, #ff0000, #ff7700, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
-    background-size: 400% 400%;
-    animation: rainbowBg 6s ease infinite;
-    font-family: "Comic Sans MS", "Courier New", Courier, monospace;
-    color: #000080;
+    background: linear-gradient(160deg, #0d0010 0%, #1a0030 40%, #2d0050 70%, #1a0820 100%);
+    background-size: 300% 300%;
+    animation: bgPulse 12s ease infinite;
+    font-family: 'Share Tech Mono', 'Courier New', monospace;
+    color: var(--text);
     max-width: 960px;
     margin: 0 auto;
     padding: 16px;
     overflow-x: hidden;
+    /* Perspective grid lines */
+    background-image:
+        linear-gradient(160deg, #0d0010 0%, #1a0030 40%, #2d0050 70%, #1a0820 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 40px, var(--grid) 40px, var(--grid) 41px),
+        repeating-linear-gradient(90deg, transparent, transparent 40px, var(--grid) 40px, var(--grid) 41px);
+}
+
+/* Scanline overlay */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(transparent 50%, rgba(0,0,0,0.08) 50%);
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 99997;
+    opacity: 0.4;
 }
 
 /* ---------- Header ---------- */
 header {
-    border: 7px ridge #ff00ff;
-    padding: 16px 20px;
+    border: 1px solid var(--accent1);
+    border-top: 3px solid var(--accent1);
+    padding: 20px;
     margin-bottom: 24px;
-    background: #ffffcc;
-    box-shadow: 6px 6px 0 #ff00ff, 12px 12px 0 #00ffff, 18px 18px 0 #ffff00;
+    background: linear-gradient(135deg, #1a0028 0%, #2d0045 100%);
+    box-shadow: 0 0 30px rgba(255,0,255,0.3), inset 0 0 30px rgba(180,0,255,0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+header::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent1), var(--cyan), var(--accent1), transparent);
 }
 
 h1 {
-    font-size: 28px;
+    font-family: 'VT323', monospace;
+    font-size: 52px;
     margin: 0 0 4px 0;
-    font-weight: bold;
+    font-weight: normal;
     text-transform: uppercase;
-    /* Multi-layer colored text shadow for 3D effect */
-    text-shadow:
-        3px 3px 0 #ff00ff,
-        6px 6px 0 #00ffff,
-        9px 9px 0 #ffff00,
-        11px 11px 8px rgba(0,0,0,0.4);
+    letter-spacing: 6px;
+    background: linear-gradient(90deg, var(--accent1), var(--cyan), var(--accent3), var(--sunset2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 12px rgba(255,0,255,0.8));
 }
 
-/* Rainbow letter coloring via spans injected by JS */
-.rainbow-letter:nth-child(7n+1) { color: #ff0000; }
-.rainbow-letter:nth-child(7n+2) { color: #ff7700; }
-.rainbow-letter:nth-child(7n+3) { color: #cccc00; }
-.rainbow-letter:nth-child(7n+4) { color: #00aa00; }
-.rainbow-letter:nth-child(7n+5) { color: #0000ff; }
-.rainbow-letter:nth-child(7n+6) { color: #8800cc; }
-.rainbow-letter:nth-child(7n+0) { color: #ff00aa; }
+.rainbow-letter { -webkit-text-fill-color: unset; }
 
 h2 {
-    font-size: 20px;
-    font-weight: bold;
+    font-family: 'VT323', monospace;
+    font-size: 28px;
+    font-weight: normal;
     text-transform: uppercase;
-    border-bottom: 3px dotted #ff6600;
-    padding-bottom: 4px;
+    letter-spacing: 4px;
+    border-bottom: 1px solid var(--accent2);
+    padding-bottom: 6px;
     margin: 32px 0 16px 0;
-    color: #cc0000;
-    text-shadow: 2px 2px 0 #ffff00, 4px 4px 0 #ff00ff;
+    color: var(--accent1);
+    text-shadow: 0 0 20px var(--accent1), 0 0 40px rgba(255,0,255,0.4);
     word-break: break-word;
 }
 
 h3 {
-    font-weight: bold;
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    font-weight: normal;
     text-transform: uppercase;
-    color: #cc0000;
+    color: var(--accent3);
     word-break: break-word;
 }
 
 p, li {
-    font-size: 14px;
-    line-height: 1.5;
-    color: #003300;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
     overflow-wrap: break-word;
-    word-wrap: break-word;
     word-break: break-word;
 }
+
+a { color: var(--cyan); text-decoration: none; }
+a:hover { color: var(--accent3); text-shadow: 0 0 8px var(--accent3); }
+
+strong { color: var(--accent3); }
 
 .project p  { margin: 6px 0; }
 .project ul { margin: 4px 0 8px 0; padding-left: 20px; }
 .project li { margin-bottom: 3px; }
+.project li::marker { color: var(--accent2); }
 
 /* ---------- Marquee ---------- */
 marquee {
-    background: #ff00ff;
-    color: yellow;
-    font-weight: bold;
-    padding: 6px;
+    background: linear-gradient(90deg, #1a0030, #2d0050, #1a0030);
+    color: var(--accent1);
+    font-family: 'VT323', monospace;
+    font-size: 14px;
+    letter-spacing: 2px;
+    font-weight: normal;
+    padding: 5px 0;
     margin: 12px 0;
-    border: 3px dashed yellow;
-    text-shadow: 1px 1px 0 #000;
+    border-top: 1px solid var(--accent2);
+    border-bottom: 1px solid var(--accent2);
+    text-shadow: 0 0 8px var(--accent1);
 }
 
 /* ---------- Blink ---------- */
-.blink {
-    animation: blink 1s infinite;
-}
+.blink { animation: blink 1.2s step-end infinite; }
 @keyframes blink {
-    0%, 49% { opacity: 1; }
-    50%, 100% { opacity: 0; }
+    0%,100% { opacity:1; }
+    50%      { opacity:0; }
 }
 
-/* ---------- Glowing neon border animation ---------- */
-@keyframes neonPulse1 {
-    0%, 100% { box-shadow: 0 0 6px 2px #ff00ff, 0 0 20px 4px #ff00ff; border-color: #ff00ff; }
-    50%       { box-shadow: 0 0 18px 6px #ff88ff, 0 0 40px 10px #ff00ff; border-color: #ff88ff; }
-}
-@keyframes neonPulse2 {
-    0%, 100% { box-shadow: 0 0 6px 2px #00ffff, 0 0 20px 4px #00ffff; border-color: #00ffff; }
-    50%       { box-shadow: 0 0 18px 6px #88ffff, 0 0 40px 10px #00ffff; border-color: #88ffff; }
-}
-@keyframes neonPulse3 {
-    0%, 100% { box-shadow: 0 0 6px 2px #00ff00, 0 0 20px 4px #00ff00; border-color: #00ff00; }
-    50%       { box-shadow: 0 0 18px 6px #88ff88, 0 0 40px 10px #00ff00; border-color: #88ff88; }
-}
-@keyframes neonPulse4 {
-    0%, 100% { box-shadow: 0 0 6px 2px #ffff00, 0 0 20px 4px #ffff00; border-color: #ffff00; }
-    50%       { box-shadow: 0 0 18px 6px #ffff88, 0 0 40px 10px #ffff00; border-color: #ffff88; }
-}
-@keyframes neonPulse5 {
-    0%, 100% { box-shadow: 0 0 6px 2px #ff4400, 0 0 20px 4px #ff4400; border-color: #ff4400; }
-    50%       { box-shadow: 0 0 18px 6px #ff9966, 0 0 40px 10px #ff4400; border-color: #ff9966; }
-}
-
-/* Marching ants border animation */
-@keyframes marchingAnts {
-    to { stroke-dashoffset: -20; }
-}
-
-/* ==============================================
-   PROJECTS CONTAINER — CSS columns (no row gaps)
-   ============================================== */
+/* ---------- Projects ---------- */
 .projects-container {
     columns: 2;
     column-gap: 20px;
 }
 
-/* Cards */
 .project {
     break-inside: avoid;
     -webkit-column-break-inside: avoid;
-    border: 5px double #ff00ff;
+    border: 1px solid var(--accent1);
     padding: 14px;
     margin-bottom: 20px;
     width: 100%;
     min-width: 0;
     overflow: hidden;
-    transition: transform 0.15s ease;
+    background: var(--card);
+    position: relative;
+    transition: transform 0.2s ease;
 }
 
-/* Alternate card background colors */
-.project:nth-child(5n+1) { background: #fff0ff; animation-name: neonPulse1; animation-duration: 2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
-.project:nth-child(5n+2) { background: #f0ffff; animation-name: neonPulse2; animation-duration: 2.4s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
-.project:nth-child(5n+3) { background: #f0fff0; animation-name: neonPulse3; animation-duration: 1.8s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
-.project:nth-child(5n+4) { background: #fffff0; animation-name: neonPulse4; animation-duration: 2.2s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
-.project:nth-child(5n+5) { background: #fff4ee; animation-name: neonPulse5; animation-duration: 2.6s; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+/* Top accent line per card */
+.project::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+}
 
-/* Summary titles */
+
+.project:nth-child(5n+1)::before { background: linear-gradient(90deg, transparent, #ff00ff, transparent); }
+
+.project:nth-child(5n+2)::before { background: linear-gradient(90deg, transparent, #00fff5, transparent); }
+
+.project:nth-child(5n+3)::before { background: linear-gradient(90deg, transparent, #cc00ff, transparent); }
+
+.project:nth-child(5n+4)::before { background: linear-gradient(90deg, transparent, #ff2d78, transparent); }
+
+.project:nth-child(5n+5)::before { background: linear-gradient(90deg, transparent, #ff6b35, transparent); }
+
+.project:hover { transform: translateY(-2px); }
+
 .project > summary {
     cursor: pointer;
-    font-size: 17px;
-    color: #ff0000;
-    font-weight: bold;
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    font-weight: normal;
+    color: var(--accent1);
     overflow-wrap: break-word;
     word-break: break-word;
     list-style: revert;
     padding: 2px 0;
     display: block;
-    text-shadow: 1px 1px 0 #ff88ff, 2px 2px 0 #ffff00;
+    text-shadow: 0 0 10px var(--accent1);
+    letter-spacing: 1px;
 }
 
-/* Inner layout: single column */
+.project > summary:hover { color: var(--cyan); text-shadow: 0 0 10px var(--cyan); }
+
 .project-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -193,85 +226,102 @@ marquee {
     word-break: break-word;
 }
 
-.project img,
-.project video {
+.project img, .project video {
     max-width: 100%;
     height: auto;
     display: block;
+    border: 1px solid rgba(255,0,255,0.2);
 }
 
-/* Nested details */
 .project details { margin: 6px 0; }
 .project details summary {
     cursor: pointer;
-    font-size: 14px;
-    color: #ff0000;
+    font-family: 'VT323', monospace;
+    font-size: 16px;
+    color: var(--accent3);
     list-style: revert;
+    text-shadow: 0 0 6px var(--accent3);
 }
 
 /* ---------- Tags ---------- */
-@keyframes tagPulse {
-    0%, 100% { background: #ccffff; border-color: #ff00ff; color: #000; }
-    50%       { background: #ff00ff; border-color: #ccffff; color: #fff; }
+@keyframes tagGlow {
+    0%,100% { border-color: var(--accent2); color: var(--accent2); box-shadow: 0 0 4px rgba(204,0,255,0.3); }
+    50%      { border-color: var(--cyan);    color: var(--cyan);    box-shadow: 0 0 8px rgba(0,255,245,0.5); }
 }
 
 .tag {
     display: inline-block;
-    border: 2px solid #ff00ff;
-    padding: 2px 6px;
+    border: 1px solid var(--accent2);
+    padding: 1px 7px;
     margin: 3px 3px 3px 0;
-    font-size: 11px;
-    background: #ccffff;
-    color: #000;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    background: rgba(180,0,255,0.08);
+    color: var(--accent2);
     white-space: nowrap;
-    animation: tagPulse 1.5s ease-in-out infinite;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    animation: tagGlow 2s ease-in-out infinite;
+}
+.tag:nth-child(2n) { animation-delay: 0.4s; }
+.tag:nth-child(3n) { animation-delay: 0.8s; }
+.tag:nth-child(4n) { animation-delay: 1.2s; }
+
+/* ---------- Nav sidebar ---------- */
+/* Override inline styles as much as possible */
+body > div:first-child > div:first-child {
+    background: linear-gradient(to bottom, #2d0050, #1a0030, #0d0010, #001a2d, #002d40) !important;
+    border: 1px solid var(--accent1) !important;
+    box-shadow: 0 0 20px rgba(255,0,255,0.2) !important;
 }
 
-.tag:nth-child(2n) { animation-delay: 0.3s; }
-.tag:nth-child(3n) { animation-delay: 0.6s; }
-.tag:nth-child(4n) { animation-delay: 0.9s; }
-.tag:nth-child(5n) { animation-delay: 1.2s; }
+body > div:first-child > div:first-child button {
+    background: rgba(255,0,255,0.1) !important;
+    color: var(--accent1) !important;
+    border: 1px solid var(--accent1) !important;
+    font-family: 'VT323', monospace !important;
+    font-size: 16px !important;
+    letter-spacing: 2px !important;
+}
+
+body > div:first-child > div:first-child p {
+    color: var(--accent1) !important;
+    font-family: 'VT323', monospace !important;
+    font-size: 18px !important;
+    letter-spacing: 3px !important;
+    text-shadow: 0 0 8px var(--accent1) !important;
+}
 
 /* ---------- Footer ---------- */
 footer {
     margin-top: 48px;
     text-align: center;
     font-size: 12px;
-    border-top: 4px groove #00ff00;
-    padding-top: 10px;
-    background: #ccffcc;
-    box-shadow: 0 0 20px 4px #00ff00;
+    border-top: 1px solid var(--accent1);
+    padding-top: 14px;
+    background: transparent;
+    color: var(--textdim);
 }
 
-/* ---------- Sparkle Effect ---------- */
+footer p { color: var(--textdim); }
+
+/* ---------- Sparkle ---------- */
 .spark {
     position: absolute;
-    font-size: 1.4em;
+    font-size: 1.2em;
     pointer-events: none;
     transform: translate(-50%, -50%);
     animation: spark-animation 0.9s ease-out forwards;
     color: var(--spark-color);
-    text-shadow: 0 0 6px var(--spark-color);
+    text-shadow: 0 0 8px var(--spark-color);
     z-index: 9999;
 }
 @keyframes spark-animation {
-    0%   { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
-    100% { opacity: 0; transform: translate(-50%, -180%) scale(0.3); }
+    0%   { opacity:1; transform:translate(-50%,-50%) scale(1.1); }
+    100% { opacity:0; transform:translate(-50%,-180%) scale(0.2); }
 }
 
-/* ==============================================
-   RESPONSIVE
-   ============================================== */
-@media (max-width: 560px) {
-    body { padding: 10px; }
-    .projects-container { columns: 1; }
-    h1 { font-size: 22px; }
-}
-
-/* =============================================
-   ZERG RUSH MINIGAME
-   ============================================= */
-
+/* ---------- Zerg ---------- */
 .zergling {
     position: absolute;
     pointer-events: auto;
@@ -279,25 +329,57 @@ footer {
     user-select: none;
     z-index: 10000;
     transition: none;
+    filter: drop-shadow(0 0 4px #ff00ff);
 }
-
-.zergling:hover {
-    transform: scale(1.4);
-    filter: brightness(2);
-}
+.zergling:hover { transform: scale(1.4); filter: drop-shadow(0 0 8px #ff00ff) brightness(1.5); }
 
 #zerg-score {
     position: fixed;
-    top: 10px;
-    right: 14px;
-    background: #000;
-    color: #ff0000;
-    font-size: 16px;
-    font-weight: bold;
+    top: 10px; right: 14px;
+    background: #0d0010;
+    color: var(--accent1);
+    font-family: 'VT323', monospace;
+    font-size: 20px;
+    letter-spacing: 2px;
     padding: 6px 12px;
-    border: 3px solid #ff0000;
+    border: 1px solid var(--accent1);
     z-index: 99999;
-    text-shadow: 0 0 6px #ff0000;
+    text-shadow: 0 0 8px var(--accent1);
     pointer-events: none;
-    animation: neonPulse1 0.8s ease-in-out infinite;
+    box-shadow: 0 0 15px rgba(255,0,255,0.4);
 }
+
+#zerg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: transparent;
+    cursor: crosshair;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 820px) {
+    body { padding: 10px; }
+    .projects-container { columns: 1; }
+    .project-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 36px; }
+}
+
+/* Ensure page content sits above ecosystem canvas */
+body > *:not(#ecosystem-canvas) {
+    position: relative;
+    z-index: 1;
+}
+
+#ecosystem-canvas {
+    background: #0d0010;
+}
+
+/* Static card accent colors — no animation to prevent flashing */
+.project:nth-child(5n+1) { background:#1a0028; border-color:#ff00ff; }
+.project:nth-child(5n+2) { background:#001a28; border-color:#00fff5; }
+.project:nth-child(5n+3) { background:#1a0020; border-color:#cc00ff; }
+.project:nth-child(5n+4) { background:#1a0818; border-color:#ff2d78; }
+.project:nth-child(5n+5) { background:#1a1008; border-color:#ff6b35; }
+
+#ecosystem-canvas { background: #0d0010; }
