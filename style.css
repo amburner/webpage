@@ -26,6 +26,7 @@
     50%      { background-position: 100% 50%; }
 }
 
+
 body {
     background: linear-gradient(160deg, #0d0010 0%, #1a0030 40%, #2d0050 70%, #1a0820 100%);
     background-size: 300% 300%;
@@ -38,9 +39,9 @@ body {
     overflow-x: hidden;
     /* Perspective grid lines */
     background-image:
-        linear-gradient(160deg, #0d0010 0%, #1a0028 20%, #2d0050 45%, #440020 60%, #1a0010 80%, #000820 100%),
-        repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(200,0,255,0.08) 40px, rgba(200,0,255,0.08) 41px),
-        repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(200,0,255,0.08) 40px, rgba(200,0,255,0.08) 41px);
+        linear-gradient(160deg, #0d0010 0%, #1a0030 40%, #2d0050 70%, #1a0820 100%),
+        repeating-linear-gradient(0deg, transparent, transparent 40px, var(--grid) 40px, var(--grid) 41px),
+        repeating-linear-gradient(90deg, transparent, transparent 40px, var(--grid) 40px, var(--grid) 41px);
 }
 
 /* Scanline overlay */
@@ -158,10 +159,8 @@ marquee {
 
 /* ---------- Projects ---------- */
 .projects-container {
-    columns: 2 !important;
+    columns: 2;
     column-gap: 20px;
-    display: block !important;
-    flex-direction: unset !important;
 }
 
 .project {
@@ -362,7 +361,7 @@ footer p { color: var(--textdim); }
 }
 
 /* ---------- Responsive ---------- */
-@media (max-width: 600px) {
+@media (max-width: 800px) {
     .projects-container { columns: 1; }
     .project-grid { grid-template-columns: 1fr; }
 }
@@ -385,15 +384,15 @@ body > *:not(#ecosystem-canvas) {
 
 /* Static card accent colors — no animation to prevent flashing */
 .project:nth-child(5n+1) { background:#1a0028; border-color:#ff00ff; }
-.project:nth-child(5n+2) { background:#00141e; border-color:#00fff5; }
-.project:nth-child(5n+3) { background:#200018; border-color:#cc00ff; }
-.project:nth-child(5n+4) { background:#1e0610; border-color:#ff2d78; }
-.project:nth-child(5n+5) { background:#180c00; border-color:#ff6b35; }
+.project:nth-child(5n+2) { background:#001a28; border-color:#00fff5; }
+.project:nth-child(5n+3) { background:#1a0020; border-color:#cc00ff; }
+.project:nth-child(5n+4) { background:#1a0818; border-color:#ff2d78; }
+.project:nth-child(5n+5) { background:#1a1008; border-color:#ff6b35; }
 
 #ecosystem-canvas { background: #0d0010; }
 
 /* ---------- Header row: sidebar + title stay horizontal on all screens ---------- */
-body > div:first-of-type:not(.projects-container) {
+body > div:first-of-type {
     display: flex !important;
     flex-direction: row !important;
     align-items: flex-start;
@@ -426,8 +425,8 @@ body > div:first-of-type > div:last-child {
     h1 { font-size: 28px !important; letter-spacing: 2px !important; }
 }
 
-@media (min-width: 1000px) {
+@media (min-width: 800px) {
     body > div:first-of-type {
-        padding: 0 40px;
+        padding: 0 100px;
     }
 }
