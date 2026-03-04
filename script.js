@@ -1042,6 +1042,8 @@ function createGraphPanel(){
     graphCanvas=document.createElement('canvas'); graphCanvas.width=360; graphCanvas.height=180;
     graphCanvas.style.cssText='position:fixed;top:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
     document.body.appendChild(graphCanvas); graphCtx=graphCanvas.getContext('2d');
+    function resizeGraph(){ graphCanvas.width=Math.min(360,window.innerWidth*0.6|0); graphCanvas.height=graphCanvas.width*0.5|0; }
+    resizeGraph(); window.addEventListener('resize',resizeGraph);
 }
 function drawGraph(){
     if(!showGraph) return;
