@@ -198,23 +198,46 @@ canvas.id='ecosystem-canvas';
 canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;will-change:transform;';
 document.addEventListener('DOMContentLoaded',()=>document.body.prepend(canvas));
 const ctx=canvas.getContext('2d', {alpha:false}); // OPTIMIZED: alpha:false skips compositing
-let W,H;
-function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; _bgDirty=true; }
+let W,H,_prevW=0,_prevH=0;
+function resize(){
+    const newW=window.innerWidth, newH=window.innerHeight;
+    W=canvas.width=newW; H=canvas.height=newH;
+    if(_bgCanvas){ _bgCanvas.width=W; _bgCanvas.height=H; }
+    _bgDirty=true;
+
+    // Scale all positions proportionally so layout is preserved across any resize
+    if(_prevW>0&&_prevH>0&&typeof stars!=='undefined'){
+        const sx=newW/_prevW, sy=newH/_prevH;
+        stars.forEach(s=>{ s.x*=sx; s.y*=sy; });
+        planets.forEach(p=>{ p.x*=sx; p.y*=sy; });
+        galaxies.forEach(g=>{ g.x*=sx; g.y*=sy; });
+        suns.forEach(s=>{ s.x*=sx; s.y*=sy; });
+        comets.forEach(c=>{ c.x*=sx; c.y*=sy; });
+        nebulas.forEach(n=>{ n.x*=sx; n.y*=sy; });
+        if(typeof creatures!=='undefined') creatures.forEach(c=>{ c.x*=sx; c.y*=sy; });
+    }
+    _prevW=newW; _prevH=newH;
+}
 window.addEventListener('load',resize); window.addEventListener('resize',resize);
 
 const rnd=(a,b)=>a+Math.random()*(b-a);
 const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const PALETTE=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ffffaa','#aaffff','#ff4400','#cc2200','#ff8800','#4400cc','#0044ff','#00ccff','#ff0044'];
-
+const PALETTE=[
+    '#ff00ff','#dd00ff','#ff44ff',  // magentas
+    '#00ffff','#00ddff','#44ffff',  // cyans
+    '#ff0088','#ff2d78','#ff44aa',  // pinks
+    '#ff6600','#ff8800','#ffaa00',  // oranges
+    '#7700ff','#4400ff','#aa44ff',  // purples
+    '#00ff88','#00ffcc','#44ffaa',  // teals
+];
 // ── OFFSCREEN BACKGROUND CACHE ────────────────────────────────────────────
-// OPTIMIZED: nebulas + base gradient rendered to offscreen canvas, only redrawn when dirty
-let _bgCanvas=null, _bgCtx=null, _bgDirty=true, _bgPhase=0;
+// Single persistent offscreen canvas; resized in-place on window resize
+let _bgCanvas=document.createElement('canvas'), _bgCtx=null, _bgDirty=true;
+_bgCanvas.width=1; _bgCanvas.height=1;
+_bgCtx=_bgCanvas.getContext('2d');
 function ensureBgCanvas(){
-    if(!_bgCanvas||_bgCanvas.width!==W||_bgCanvas.height!==H){
-        _bgCanvas=document.createElement('canvas'); _bgCanvas.width=W; _bgCanvas.height=H;
-        _bgCtx=_bgCanvas.getContext('2d'); _bgDirty=true;
-    }
+    // Canvas dimensions are kept current by resize(); nothing to do here
 }
 
 // ── DAY/NIGHT ─────────────────────────────────────────────────────────────
@@ -223,51 +246,34 @@ const DAY_LEN=7200;
 function updateDayNight(){ dayT=(Math.sin(dayPhase*Math.PI*2/DAY_LEN)+1)/2; dayPhase=(dayPhase+1)%DAY_LEN; }
 
 // OPTIMIZED: draw background to offscreen canvas, blit to main in one drawImage call
+// BG is redrawn only when dayT changes enough — nebulas are baked in at that point
 function renderBgToCache(nebulas){
-    if(!_bgCtx) return;
+    if(!_bgCtx||!W||!H) return;
     const gc=_bgCtx;
     const night=1-dayT;
 
-    // Base fill - no alpha compositing needed
+    // Base fill
     gc.fillStyle=night>0.5?'#04000a':'#1a0028';
     gc.fillRect(0,0,W,H);
 
-    // Night gradient overlay
+    // Night vignette overlay
     if(night>0.05){
-        gc.globalAlpha=night*0.75;
-        const ng=gc.createRadialGradient(W*.3,H*.4,0,W*.5,H*.5,Math.max(W,H)*.9);
-        ng.addColorStop(0,'#1a000a'); ng.addColorStop(.2,'#0a0025'); ng.addColorStop(.5,'#15000f'); ng.addColorStop(.8,'#060020'); ng.addColorStop(1,'#000000');
+        gc.globalAlpha=night*0.6;
+        const ng=gc.createRadialGradient(W*.5,H*.5,0,W*.5,H*.5,Math.max(W,H)*.85);
+        ng.addColorStop(0,'#0a0020'); ng.addColorStop(.5,'#06001a'); ng.addColorStop(1,'#000000');
         gc.fillStyle=ng; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
     }
-    // Aurora
-    if(night>0.3){
-        gc.globalAlpha=(night-0.3)*0.5;
-        [0,1,2,3].forEach(i=>{
-            const ax=W*(0.15+i*0.22)+Math.sin(dayPhase*0.002+i)*40;
-            const ag=gc.createLinearGradient(ax,0,ax+80,H*0.45);
-            const cols=[['#ff00ff','#cc00ff'],['#00fff5','#0044ff'],['#ff2d78','#880022'],['#dd88ff','#440066']];
-            ag.addColorStop(0,cols[i][0]+'66'); ag.addColorStop(.5,cols[i][1]+'33'); ag.addColorStop(1,'transparent');
-            gc.fillStyle=ag; gc.beginPath(); gc.moveTo(ax-20,0); gc.lineTo(ax+60,0); gc.lineTo(ax+80,H*.45); gc.lineTo(ax,H*.45); gc.fill();
-        });
-        gc.globalAlpha=1;
-    }
-    // Sunrise/sunset
+
+    // Sunrise/sunset horizon glow (bottom only, no top rays)
     const tt=1-Math.abs(dayT-0.5)*2;
     if(tt>0.05){
-        gc.globalAlpha=tt*0.65;
-        const dg=gc.createLinearGradient(0,0,0,H);
-        if(dayT>0.5){ dg.addColorStop(0,'transparent'); dg.addColorStop(.55,'#ff440044'); dg.addColorStop(.75,'#ff880088'); dg.addColorStop(.9,'#ffaa00aa'); dg.addColorStop(1,'#ff660088'); }
-        else        { dg.addColorStop(0,'transparent'); dg.addColorStop(.5,'#cc220044'); dg.addColorStop(.75,'#880000aa'); dg.addColorStop(1,'#ff0044aa'); }
-        gc.fillStyle=dg; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
-    }
-    if(dayT>0.3){
-        gc.globalAlpha=(dayT-0.3)*0.25;
-        const dg2=gc.createRadialGradient(W*.5,H*.4,0,W*.5,H*.5,Math.max(W,H)*.7);
-        dg2.addColorStop(0,'#2d0050'); dg2.addColorStop(.5,'#1a0030'); dg2.addColorStop(1,'transparent');
-        gc.fillStyle=dg2; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
+        gc.globalAlpha=tt*0.45;
+        const dg=gc.createLinearGradient(0,H*0.6,0,H);
+        if(dayT>0.5){ dg.addColorStop(0,'#ff440000'); dg.addColorStop(.5,'#ff440033'); dg.addColorStop(1,'#ff660066'); }
+        else        { dg.addColorStop(0,'#88000000'); dg.addColorStop(.5,'#880000aa'); dg.addColorStop(1,'#ff004488'); }        gc.fillStyle=dg; gc.fillRect(0,H*0.6,W,H*0.4); gc.globalAlpha=1;
     }
 
-    // Nebulas baked in here (static-ish layer)
+    // Nebulas baked in (positions already updated separately on a slow timer)
     nebulas.forEach(n=>n.drawTo(gc));
     _bgDirty=false;
 }
@@ -280,8 +286,7 @@ function updateDrawBlooms(){
     foodBlooms.forEach(b=>{
         b.life--;
         ctx.globalAlpha=(b.life/b.maxLife)*0.4;
-        const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r); g.addColorStop(0,'#00ffaa'); g.addColorStop(1,'transparent');
-        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+        const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r); g.addColorStop(0,'#00ffaa'); g.addColorStop(1,'#00ffaa00');        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
     });
 }
 
@@ -289,62 +294,245 @@ function updateDrawBlooms(){
 class Star {
     constructor(){ this.reset(true); }
     reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(.3,1.8); this.spd=rnd(.02,.15); this.dir=rnd(0,Math.PI*2); this.tw=rnd(0,Math.PI*2); this.twSpd=rnd(.02,.05); this.col=pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']); }
-    update(){ this.x+=Math.cos(this.dir)*this.spd; this.y+=Math.sin(this.dir)*this.spd; this.tw+=this.twSpd; if(this.x<-5||this.x>W+5||this.y<-5||this.y>H+5) this.reset(false); }
+    update(){
+        this.dir += rnd(-.015, .015);
+        this.x += Math.cos(this.dir) * this.spd;
+        this.y += Math.sin(this.dir) * this.spd;
+        this.tw += this.twSpd;
+        if(this.x < -5 || this.x > W + 5 || this.y < -5 || this.y > H + 5) this.reset(false);
+    }
     draw(){ ctx.globalAlpha=(0.4+0.5*Math.sin(this.tw))*(0.4+0.6*dayT); ctx.fillStyle=this.col; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
 }
 
 // OPTIMIZED: batch all stars in one draw pass using a single beginPath per color group
 function drawStarsBatched(stars){
-    // Group by color
     const groups={};
-    stars.forEach(s=>{
-        const a=(0.4+0.5*Math.sin(s.tw))*(0.4+0.6*dayT);
-        const key=s.col;
-        if(!groups[key]) groups[key]={col:s.col,items:[]};
-        groups[key].items.push({x:s.x,y:s.y,r:s.r,a});
-    });
-    Object.values(groups).forEach(g=>{
-        ctx.fillStyle=g.col;
-        g.items.forEach(({x,y,r,a})=>{
-            ctx.globalAlpha=a;
-            ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
-        });
-    });
+    for(let i=0;i<stars.length;i++){
+        const s=stars[i];
+        if(!groups[s.col]) groups[s.col]=[];
+        groups[s.col].push(s);
+    }
+    const keys=Object.keys(groups);
+    for(let k=0;k<keys.length;k++){
+        const g=groups[keys[k]];
+        ctx.fillStyle=keys[k];
+        for(let i=0;i<g.length;i++){
+            const s=g[i];
+            ctx.globalAlpha=(0.4+0.5*Math.sin(s.tw))*(0.4+0.6*dayT);
+            ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2); ctx.fill();
+        }
+    }
     ctx.globalAlpha=1;
 }
 
 class Planet {
     constructor(){ this.reset(true); }
-    reset(init){ this.r=rnd(18,52); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-10:(W||1200)+this.r+10); this.y=rnd(this.r,(H||800)-this.r); this.spd=rnd(.04,.2); this.dx=(this.x<0?1:-1)*this.spd; this.dy=rnd(-.04,.04); this.col=pick(PALETTE); this.col2=pick(PALETTE); this.rings=Math.random()<.4; this.ringTilt=rnd(.2,.6); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.004,.004); this.grav=this.r*7; }
-    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false); }
+    reset(init){
+        this.r = rnd(18, 52);
+        if(init){
+            this.x = rnd(0, W || 1200);
+            this.y = rnd(this.r, (H || 800) - this.r);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.04, .2);
+            this.dy = rnd(-.06, .06);
+        } else {
+            const edge = Math.floor(Math.random() * 4);
+            if(edge === 0){      this.x = -this.r - 10;    this.y = rnd(0, H); }
+            else if(edge === 1){ this.x = W + this.r + 10;  this.y = rnd(0, H); }
+            else if(edge === 2){ this.x = rnd(0, W);         this.y = -this.r - 10; }
+            else {               this.x = rnd(0, W);         this.y = H + this.r + 10; }
+            const targetX = W * rnd(0.25, 0.75);
+            const targetY = H * rnd(0.25, 0.75);
+            const angle = Math.atan2(targetY - this.y, targetX - this.x);
+            const spd = rnd(.04, .2);
+            this.dx = Math.cos(angle) * spd;
+            this.dy = Math.sin(angle) * spd;
+        }
+        this.spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+        this.col = pick(PALETTE); this.col2 = pick(PALETTE);
+        this.rings = Math.random() < .4; this.ringTilt = rnd(.2, .6);
+        this.rot = rnd(0, Math.PI * 2); this.rotSpd = rnd(-.004, .004);
+        this.grav = this.r * 7;
+    }
+    update(){
+        this.x += this.dx;
+        this.y += this.dy;
+        this.rot += this.rotSpd;
+        this.dx += rnd(-.003, .003);
+        this.dy += rnd(-.003, .003);
+        const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+        if(spd > 0.25){ this.dx = this.dx / spd * 0.25; this.dy = this.dy / spd * 0.25; }
+        if(spd < 0.04){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(this.x < -this.r - 60 || this.x > W + this.r + 60 ||
+        this.y < -this.r - 60 || this.y > H + this.r + 60) this.reset(false);
+    }
     draw(){
         ctx.save(); ctx.translate(this.x,this.y);
-        const g1=ctx.createRadialGradient(0,0,this.r*.5,0,0,this.r*2); g1.addColorStop(0,this.col+'22'); g1.addColorStop(1,'transparent'); ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(0,0,this.r*2,0,Math.PI*2); ctx.fill();
-        const g2=ctx.createRadialGradient(-this.r*.3,-this.r*.3,this.r*.1,0,0,this.r); g2.addColorStop(0,'#ffffff33'); g2.addColorStop(.4,this.col); g2.addColorStop(1,this.col2); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+        const g1=ctx.createRadialGradient(0,0,this.r*.5,0,0,this.r*2); g1.addColorStop(0,this.col+'22'); g1.addColorStop(1,this.col+'00');        const g2=ctx.createRadialGradient(-this.r*.3,-this.r*.3,this.r*.1,0,0,this.r); g2.addColorStop(0,'#ffffff33'); g2.addColorStop(.4,this.col); g2.addColorStop(1,this.col2); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
         if(this.rings){ ctx.save(); ctx.scale(1,this.ringTilt); ctx.strokeStyle=this.col+'88'; ctx.lineWidth=this.r*.16; ctx.beginPath(); ctx.arc(0,0,this.r*1.55,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
         ctx.restore();
     }
 }
 class Galaxy {
     constructor(){ this.reset(true); }
-    reset(init){ this.r=rnd(40,100); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-20:(W||1200)+this.r+20); this.y=rnd(this.r,(H||800)-this.r); this.dx=(this.x<0?1:-1)*rnd(.01,.07); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.002,.002); this.arms=Math.floor(rnd(2,5)); this.col=pick(PALETTE); this.col2=pick(PALETTE); this.grav=this.r*6; }
-    update(){ this.x+=this.dx; this.rot+=this.rotSpd; if(this.x<-this.r-80||this.x>W+this.r+80) this.reset(false); }
+    reset(init){
+        this.r = rnd(40, 100);
+        if(init){
+            this.x = rnd(0, W || 1200);
+            this.y = rnd(this.r, (H || 800) - this.r);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.01, .07);
+            this.dy = rnd(-.04, .04);
+        } else {
+            const edge = Math.floor(Math.random() * 4);
+            if(edge === 0){      this.x = -this.r - 20;    this.y = rnd(0, H); }
+            else if(edge === 1){ this.x = W + this.r + 20;  this.y = rnd(0, H); }
+            else if(edge === 2){ this.x = rnd(0, W);         this.y = -this.r - 20; }
+            else {               this.x = rnd(0, W);         this.y = H + this.r + 20; }
+            const targetX = W * rnd(0.25, 0.75);
+            const targetY = H * rnd(0.25, 0.75);
+            const angle = Math.atan2(targetY - this.y, targetX - this.x);
+            const spd = rnd(.01, .07);
+            this.dx = Math.cos(angle) * spd;
+            this.dy = Math.sin(angle) * spd;
+        }
+        this.rot = rnd(0, Math.PI * 2); this.rotSpd = rnd(-.002, .002);
+        this.arms = Math.floor(rnd(2, 5));
+        this.col = pick(PALETTE); this.col2 = pick(PALETTE);
+        this.grav = this.r * 6;
+    }
+    update(){
+        this.x += this.dx;
+        this.y += (this.dy || 0);
+        this.rot += this.rotSpd;
+        this.dx += rnd(-.002, .002);
+        this.dy = (this.dy || 0) + rnd(-.002, .002);
+        const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+        if(spd > 0.09){ this.dx = this.dx / spd * 0.09; this.dy = this.dy / spd * 0.09; }
+        if(spd < 0.01){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(this.x < -this.r - 80 || this.x > W + this.r + 80 ||
+        this.y < -this.r - 80 || this.y > H + this.r + 80) this.reset(false);
+    }
     draw(){
-        ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
-        const cg=ctx.createRadialGradient(0,0,0,0,0,this.r*.4); cg.addColorStop(0,'#ffffff66'); cg.addColorStop(.3,this.col+'99'); cg.addColorStop(1,'transparent'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,this.r*.4,0,Math.PI*2); ctx.fill();
-        for(let a=0;a<this.arms;a++){ ctx.save(); ctx.rotate(Math.PI*2/this.arms*a); const ag=ctx.createLinearGradient(0,0,this.r,0); ag.addColorStop(0,this.col+'88'); ag.addColorStop(1,'transparent'); ctx.strokeStyle=ag; ctx.lineWidth=this.r*.15; ctx.beginPath(); ctx.moveTo(0,0); for(let t=0;t<1;t+=.03){ const ang=t*Math.PI*1.5,rad=t*this.r; ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad); } ctx.stroke(); ctx.restore(); }
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot);
+
+        // Outer glow halo
+        const halo = ctx.createRadialGradient(0, 0, this.r * .3, 0, 0, this.r * 1.6);
+        halo.addColorStop(0,   this.col + '00');
+        halo.addColorStop(.4,  this.col + '18');
+        halo.addColorStop(.8,  this.col2 + '22');
+        halo.addColorStop(1,   this.col + '00');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(0, 0, this.r * 1.6, 0, Math.PI * 2); ctx.fill();
+
+        // Spiral arms — two passes, wide soft base + narrow bright core
+        for(let a = 0; a < this.arms; a++){
+            ctx.save(); ctx.rotate(Math.PI * 2 / this.arms * a);
+
+            // Wide soft arm
+            const ag1 = ctx.createLinearGradient(0, 0, this.r, 0);
+            ag1.addColorStop(0,   this.col + 'cc');
+            ag1.addColorStop(.4,  this.col2 + '99');
+            ag1.addColorStop(.75, this.col + '44');
+            ag1.addColorStop(1,   this.col + '00');
+            ctx.strokeStyle = ag1;
+            ctx.lineWidth = this.r * .22;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for(let t = 0; t < 1; t += .02){
+                const ang = t * Math.PI * 1.8, rad = t * this.r;
+                ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+            }
+            ctx.stroke();
+
+            // Bright narrow arm core
+            const ag2 = ctx.createLinearGradient(0, 0, this.r * .8, 0);
+            ag2.addColorStop(0,   '#ffffff99');
+            ag2.addColorStop(.3,  this.col2 + 'bb');
+            ag2.addColorStop(.7,  this.col + '66');
+            ag2.addColorStop(1,   this.col + '00');
+            ctx.strokeStyle = ag2;
+            ctx.lineWidth = this.r * .06;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            for(let t = 0; t < 1; t += .02){
+                const ang = t * Math.PI * 1.8, rad = t * this.r * .85;
+                ctx.lineTo(Math.cos(ang) * rad, Math.sin(ang) * rad);
+            }
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Dense bright core
+        const core = ctx.createRadialGradient(0, 0, 0, 0, 0, this.r * .28);
+        core.addColorStop(0,   '#ffffff');
+        core.addColorStop(.2,  '#ffffffdd');
+        core.addColorStop(.5,  this.col2 + 'ee');
+        core.addColorStop(.8,  this.col + 'aa');
+        core.addColorStop(1,   this.col + '00');
+        ctx.fillStyle = core;
+        ctx.beginPath(); ctx.arc(0, 0, this.r * .28, 0, Math.PI * 2); ctx.fill();
+
+        // Core star burst — 4 rays
+        ctx.save();
+        for(let i = 0; i < 4; i++){
+            ctx.rotate(Math.PI / 4);
+            const ray = ctx.createLinearGradient(0, 0, this.r * .35, 0);
+            ray.addColorStop(0,   '#ffffffcc');
+            ray.addColorStop(.5,  this.col2 + '55');
+            ray.addColorStop(1,   this.col + '00');
+            ctx.strokeStyle = ray;
+            ctx.lineWidth = this.r * .03;
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(this.r * .35, 0); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-this.r * .35, 0); ctx.stroke();
+        }
+        ctx.restore();
+
         ctx.restore();
     }
 }
 class Sun {
     constructor(){ this.reset(true); }
-    reset(init){ this.r=rnd(12,30); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-10:(W||1200)+this.r+10); this.y=rnd(this.r,(H||800)-this.r); this.dx=(this.x<0?1:-1)*rnd(.03,.12); this.dy=rnd(-.03,.03); this.col=pick(['#ffffff','#ffe8aa','#ffcc44','#ffaa22','#ff8800']); this.pulse=rnd(0,Math.PI*2); this.pulseSpd=rnd(.02,.05); this.grav=this.r*5; }
-    update(){ this.x+=this.dx; this.y+=this.dy; this.pulse+=this.pulseSpd; if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false); }
+    reset(init){
+        this.r = rnd(12, 30);
+        if(init){
+            this.x = rnd(0, W || 1200);
+            this.y = rnd(this.r, (H || 800) - this.r);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.03, .12);
+            this.dy = rnd(-.05, .05);
+        } else {
+            const edge = Math.floor(Math.random() * 4);
+            if(edge === 0){      this.x = -this.r - 10;    this.y = rnd(0, H); }
+            else if(edge === 1){ this.x = W + this.r + 10;  this.y = rnd(0, H); }
+            else if(edge === 2){ this.x = rnd(0, W);         this.y = -this.r - 10; }
+            else {               this.x = rnd(0, W);         this.y = H + this.r + 10; }
+            const targetX = W * rnd(0.25, 0.75);
+            const targetY = H * rnd(0.25, 0.75);
+            const angle = Math.atan2(targetY - this.y, targetX - this.x);
+            const spd = rnd(.03, .12);
+            this.dx = Math.cos(angle) * spd;
+            this.dy = Math.sin(angle) * spd;
+        }
+        this.col = pick(['#ffffff','#ffe8aa','#ffcc44','#ffaa22','#ff8800']);
+        this.pulse = rnd(0, Math.PI * 2); this.pulseSpd = rnd(.02, .05);
+        this.grav = this.r * 5;
+    }
+    update(){
+        this.x += this.dx;
+        this.y += this.dy;
+        this.pulse += this.pulseSpd;
+        this.dx += rnd(-.004, .004);
+        this.dy += rnd(-.004, .004);
+        const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
+        if(spd > 0.15){ this.dx = this.dx / spd * 0.15; this.dy = this.dy / spd * 0.15; }
+        if(spd < 0.03){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(this.x < -this.r - 60 || this.x > W + this.r + 60 ||
+        this.y < -this.r - 60 || this.y > H + this.r + 60) this.reset(false);
+    }
     draw(){
         ctx.save(); ctx.translate(this.x,this.y);
         const pr=this.r*(1.1+.15*Math.sin(this.pulse));
-        const cg=ctx.createRadialGradient(0,0,this.r*.5,0,0,pr*4); cg.addColorStop(0,this.col+'44'); cg.addColorStop(1,'transparent'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,pr*4,0,Math.PI*2); ctx.fill();
-        const bg=ctx.createRadialGradient(-this.r*.2,-this.r*.2,0,0,0,pr); bg.addColorStop(0,'#ffffff'); bg.addColorStop(.3,this.col); bg.addColorStop(1,this.col+'88'); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,pr,0,Math.PI*2); ctx.fill();
+        const cg=ctx.createRadialGradient(0,0,this.r*.5,0,0,pr*4); cg.addColorStop(0,this.col+'44'); cg.addColorStop(1,this.col+'00'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,pr*4,0,Math.PI*2); ctx.fill();        const bg=ctx.createRadialGradient(-this.r*.2,-this.r*.2,0,0,0,pr); bg.addColorStop(0,'#ffffff'); bg.addColorStop(.3,this.col); bg.addColorStop(1,this.col+'88'); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,pr,0,Math.PI*2); ctx.fill();
         ctx.restore();
     }
 }
@@ -356,7 +544,7 @@ class Comet {
         const alpha=Math.min(1,this.life/30)*.85, angle=Math.atan2(this.dy,this.dx);
         ctx.save(); ctx.globalAlpha=alpha;
         const tg=ctx.createLinearGradient(this.x,this.y,this.x-Math.cos(angle)*this.tailLen,this.y-Math.sin(angle)*this.tailLen);
-        tg.addColorStop(0,this.col+'cc'); tg.addColorStop(1,'transparent');
+        tg.addColorStop(0,this.col+'cc'); tg.addColorStop(1,this.col+'00');
         ctx.strokeStyle=tg; ctx.lineWidth=this.r*1.2; ctx.beginPath(); ctx.moveTo(this.x,this.y); ctx.lineTo(this.x-Math.cos(angle)*this.tailLen,this.y-Math.sin(angle)*this.tailLen); ctx.stroke();
         ctx.fillStyle=this.col; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
         ctx.globalAlpha=1; ctx.restore();
@@ -364,18 +552,73 @@ class Comet {
 }
 
 // OPTIMIZED: Nebula draws to a provided context (so it can go into the BG cache)
+// Purple/blue palette, multi-lobe feathered edges, rare warm accent
+// Each nebula pre-bakes itself to a small offscreen canvas on reset — drawTo is a single drawImage
+const NEBULA_COLS=[
+  ['#3300aa','#6600cc'],['#220066','#4400ff'],['#0022bb','#0055ff'],
+  ['#440088','#9900cc'],['#001166','#0033cc'],['#550099','#aa00ff'],
+  ['#cc2200','#ff6600'],['#ff4400','#ff8800'],
+  ['#990044','#ff0077'],['#cc0066','#880055'],
+  ['#882200','#ff4422'],['#660033','#ff2255'],
+];
 class Nebula {
-    constructor(){ this.reset(true); }
-    reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(120,320); this.col=pick(['#cc2200','#ff4400','#4400cc','#880044','#cc0044','#ff6600','#220066','#660022']); this.col2=pick(['#ff0000','#cc4400','#000044','#aa0022','#ff2200','#4400aa']); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.0002,.0002); this.dx=rnd(-.04,.04); this.dy=rnd(-.02,.02); }
-    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); _bgDirty=true; }
-    drawTo(gc){
-        gc.save(); gc.translate(this.x,this.y); gc.rotate(this.rot); gc.globalAlpha=0.12;
-        const g=gc.createRadialGradient(0,0,this.r*.1,0,0,this.r); g.addColorStop(0,this.col+'ff'); g.addColorStop(.4,this.col2+'cc'); g.addColorStop(1,'transparent');
-        gc.fillStyle=g; gc.scale(1.8,.9); gc.beginPath(); gc.arc(0,0,this.r,0,Math.PI*2); gc.fill();
-        gc.globalAlpha=.07; gc.scale(.7,1.3); gc.beginPath(); gc.arc(this.r*.2,0,this.r*.8,0,Math.PI*2); gc.fill();
-        gc.globalAlpha=1; gc.restore();
+    constructor(){ this._bc=document.createElement('canvas'); this._bctx=this._bc.getContext('2d'); this.reset(true); }
+    reset(init){
+        this.x=rnd(0,W||1200); this.y=rnd(0,H||800);
+        this.r=rnd(130,340);
+        const warm=Math.random()<0.17;
+        const pool=warm?NEBULA_COLS.slice(8):NEBULA_COLS.slice(0,8);
+        const [c1,c2]=pick(pool);
+        this.col=c1; this.col2=c2;
+        this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.00015,.00015);
+        this.dx=rnd(-.03,.03); this.dy=rnd(-.015,.015);
+        this.lobes=Array.from({length:Math.floor(rnd(3,6))},()=>({
+            ox:rnd(-.4,.4), oy:rnd(-.4,.4),
+            sx:rnd(.6,1.3),  sy:rnd(.5,1.0),
+            a:rnd(.035,.08), r:rnd(.5,.9),
+        }));
+        this._bake();
     }
-    draw(){ this.drawTo(ctx); } // fallback
+    _bake(){
+        // Render the nebula shape once into a local canvas sized to 2.8r × 2.8r
+        const sz=Math.ceil(this.r*2.8);
+        this._bc.width=sz; this._bc.height=sz;
+        const gc=this._bctx, cx=sz/2, cy=sz/2;
+        gc.clearRect(0,0,sz,sz);
+        this.lobes.forEach(l=>{
+            gc.save();
+            gc.translate(cx+this.r*l.ox, cy+this.r*l.oy);
+            gc.scale(l.sx, l.sy);
+            const lr=this.r*l.r;
+            // Feathered outer halo
+            const gOut = gc.createRadialGradient(0, 0, lr * .25, 0, 0, lr * 1.2);
+            gOut.addColorStop(0,   this.col2 + '00');
+            gOut.addColorStop(.5,  this.col2 + '14');
+            gOut.addColorStop(1,   this.col2 + '00');
+            gc.globalAlpha=l.a*.7;
+            gc.fillStyle=gOut;
+            gc.beginPath(); gc.arc(0,0,lr*1.2,0,Math.PI*2); gc.fill();
+            // Main lobe — hard-feathers to transparent
+            const g = gc.createRadialGradient(0, 0, 0, 0, 0, lr);
+            g.addColorStop(0,   this.col + '4a');
+            g.addColorStop(.35, this.col2 + '38');
+            g.addColorStop(.7,  this.col + '1a');
+            g.addColorStop(1,   this.col + '00');
+            gc.globalAlpha=l.a;
+            gc.fillStyle=g;
+            gc.beginPath(); gc.arc(0,0,lr,0,Math.PI*2); gc.fill();
+            gc.restore();
+        });
+    }
+    // Called on a slow timer (every 90 frames), NOT every frame
+    updatePosition(){ this.x+=this.dx*90; this.y+=this.dy*90; this.rot+=this.rotSpd*90; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); }
+    drawTo(gc){
+        const sz=this._bc.width;
+        gc.save(); gc.translate(this.x,this.y); gc.rotate(this.rot);
+        gc.drawImage(this._bc,-sz/2,-sz/2);
+        gc.restore();
+    }
+    draw(){ this.drawTo(ctx); }
 }
 
 // ── SPATIAL HASH for O(1) neighbour lookup ────────────────────────────────
@@ -431,16 +674,16 @@ function nnForward(w, inputs){
 // ── CREATURES ─────────────────────────────────────────────────────────────
 let generationCount=0, creatureIdCounter=0;
 const SPECIES_DEFS={
-    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0], sense:60,  reproduce:0.004, activeAtNight:true },
-    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8], sense:80,  reproduce:0.003, activeAtNight:false},
-    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5], sense:40,  reproduce:0.004, activeAtNight:false},
-    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4], sense:120, reproduce:0.0008,activeAtNight:true },
-    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9], sense:100, reproduce:0.0008,activeAtNight:true },
-    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[40,80], speed:[0.30,0.75],sense:200,reproduce:0.0003,activeAtNight:true },
+    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0], sense:60,  reproduce:0.0012,activeAtNight:true },
+    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8], sense:80,  reproduce:0.0009,activeAtNight:false},
+    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5], sense:40,  reproduce:0.0012,activeAtNight:false},
+    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4], sense:120, reproduce:0.0006,activeAtNight:true },
+    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9], sense:100, reproduce:0.0006,activeAtNight:true },
+    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[40,80], speed:[0.30,0.75],sense:200,reproduce:0.0002,activeAtNight:true },
 };
 let creatures=[], evoLog=[];
 let popHistory={jellyfish:[],manta:[],seahorse:[],shark:[],anglerfish:[],leviathan:[]};
-const POP_MAX=120, POP_CAP=200;
+const POP_MAX=120, POP_CAP=60; // hard cap at 60 total creatures
 let traitHistory={};
 
 function lineageDrift(hex){
@@ -458,7 +701,7 @@ function spawnCreature(key, x, y, parent){
         size:   parent?mut(parent.size,1.2)   :rnd(def.size[0],def.size[1]),
         speed:  parent?mut(parent.speed,.08)  :rnd(def.speed[0],def.speed[1]),
         sense:  parent?mut(parent.sense,6)    :def.sense,
-        reproduce: parent?clamp(parent.reproduce+rnd(-.0001,.0002),.00005,.003):def.reproduce,
+        reproduce: parent?clamp(parent.reproduce+rnd(-.00008,.00008),.00003,.0015):def.reproduce,
         color:  parent?lineageDrift(parent.color):def.baseColor,
         energy:160, age:0, maxAge:rnd(2500,6000), reproduced:false,
         frame:Math.random()*Math.PI*2,
@@ -471,7 +714,7 @@ function spawnCreature(key, x, y, parent){
 }
 function initCreatures(){
     Object.keys(SPECIES_DEFS).forEach(k=>{
-        const n=k==='leviathan'?2:k==='shark'||k==='anglerfish'?5:k==='seahorse'?14:10;
+        const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?3:k==='seahorse'?8:6;
         for(let i=0;i<n;i++) creatures.push(spawnCreature(k));
     });
 }
@@ -541,17 +784,24 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
         const sense2prey=(c.sense*godMode.aggrMult)*(c.sense*godMode.aggrMult);
         if(isPrey&&d<sense2prey&&d<preyD){ preyDx=o.x-c.x; preyDy=o.y-c.y; preyD=d; }
-        if(!c.reproduced&&o.species===c.species&&o.energy>110){
+        if(!c.reproduced&&o.species===c.species&&o.energy>130){
             const sense2mate=(c.sense*2)*(c.sense*2);
             if(d<sense2mate&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
         }
     });
 
-    // Celestial food (small fixed arrays, no optimization needed)
+    // Celestial food — seek an orbit point at safe radius, not the dead center
     let foodDx=0,foodDy=0,foodD=Infinity;
     [...planets,...galaxies,...suns].forEach(obj=>{
-        const dx=obj.x-c.x, dy=obj.y-c.y, d=dx*dx+dy*dy;
-        if(d<obj.grav*obj.grav&&d<foodD){ foodDx=dx; foodDy=dy; foodD=d; }
+        const dx=obj.x-c.x, dy=obj.y-c.y, d2=dx*dx+dy*dy;
+        const gravR=obj.grav||obj.r*4;
+        if(d2<gravR*gravR&&d2<foodD){
+            // Aim for orbit at 1.5× radius, not the center
+            const d=Math.sqrt(d2)||1;
+            const orbitR=obj.r*1.5;
+            const tx=c.x+dx/d*(d-orbitR), ty=c.y+dy/d*(d-orbitR);
+            foodDx=tx-c.x; foodDy=ty-c.y; foodD=d2;
+        }
     });
     foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=dx*dx+dy*dy; if(d<(b.r*2)*(b.r*2)&&d<foodD){foodDx=dx;foodDy=dy;foodD=d;} });
 
@@ -586,6 +836,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
 
         if(!dominated&&preyD<Infinity&&huntWeight>0.4){
             const d=Math.sqrt(preyDx*preyDx+preyDy*preyDy)||1;
+            if(c.diet==='apex'){
+                // Apex predators: bypass smoothing, commit velocity directly so they don't oscillate
+                c.vx=preyDx/d*c.speed; c.vy=preyDy/d*c.speed;
+            }
             desiredX=preyDx/d*c.speed*(c._crowdFactor||1); desiredY=preyDy/d*c.speed*(c._crowdFactor||1); dominated=true;
             // Kill check using nearby (already filtered)
             nearby.forEach(p=>{ if(p===c||p._dead) return; const isPrey=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!isPrey) return; const dx=p.x-c.x,dy=p.y-c.y,d2=Math.sqrt(dx*dx+dy*dy); if(d2<c.size+p.size){ c.energy+=p.size*14*(1+c.size*.04); p._dead=true; } });
@@ -603,13 +857,36 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
             }
         }
 
-        if(c.diet==='carn'||c.diet==='apex'){
-            [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist<obj.r*1.8){desiredX-=dx/dist*c.speed;desiredY-=dy/dist*c.speed;dominated=true;} });
+        // Universal core repulsion — only if not already committed to a hunt/flee
+        if(!dominated){
+            [...planets,...galaxies,...suns].forEach(obj=>{
+                const dx=obj.x-c.x, dy=obj.y-c.y, dist=Math.sqrt(dx*dx+dy*dy)||1;
+                const coreR=obj.r*(c.diet==='herb'?0.9:1.1);
+                if(dist<coreR){ desiredX-=dx/dist*c.speed*1.5; desiredY-=dy/dist*c.speed*1.5; dominated=true; }
+            });
         }
 
         if(c.diet==='herb'){
-            [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<obj.r*1.2) c.energy-=.4; else if(d<obj.r*3) c.energy+=2.2*godMode.foodMult; });
-            suns.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<s.grav) c.energy+=(1-d/s.grav)*2.5*godMode.foodMult; });
+            [...planets,...galaxies].forEach(obj=>{
+                const dx=obj.x-c.x, dy=obj.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+                if(d<obj.r*0.9){
+                    // Inside core — strong push out, lose energy
+                    desiredX-=dx/d*c.speed*2; desiredY-=dy/d*c.speed*2; dominated=true;
+                    c.energy-=1.5;
+                } else if(d<obj.r*2.5){
+                    c.energy+=2.2*godMode.foodMult;
+                }
+            });
+            suns.forEach(s=>{
+                const dx=s.x-c.x, dy=s.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+                if(d<s.r*1.2){
+                    // Too close to sun core — push out
+                    desiredX-=dx/d*c.speed*2; desiredY-=dy/d*c.speed*2; dominated=true;
+                    c.energy-=1.0;
+                } else if(d<s.grav){
+                    c.energy+=(1-d/s.grav)*2.5*godMode.foodMult;
+                }
+            });
             stars.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<80) c.energy+=.6*godMode.foodMult; });
             const edgeD=Math.min(c.x,c.y,W-c.x,H-c.y); if(edgeD<120) c.energy+=(1-edgeD/120)*1.5*godMode.foodMult;
             c.energy+=.04*godMode.foodMult;
@@ -623,24 +900,63 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     }
 
     if(!dominated){
-        c._wanderAngle+=clamp(rnd(-.03,.03),-.025,.025);
-        desiredX=Math.cos(c._wanderAngle)*c.speed; desiredY=Math.sin(c._wanderAngle)*c.speed;
+        c._wanderAngle += clamp(rnd(-.03,.03), -.025, .025);
+
+        // Near a wall — steer wander angle back toward center
+        const edgePad = 150;
+        let wallBias = 0;
+        if(c.x < edgePad)     wallBias =  Math.PI * 0.5 * (1 - c.x / edgePad);
+        if(c.x > W - edgePad) wallBias = -Math.PI * 0.5 * (1 - (W - c.x) / edgePad);
+        if(c.y < edgePad)     wallBias +=  Math.PI * 0.5 * (1 - c.y / edgePad);
+        if(c.y > H - edgePad) wallBias -= Math.PI * 0.5 * (1 - (H - c.y) / edgePad);
+
+        if(wallBias !== 0){
+            const target = Math.atan2(H/2 - c.y, W/2 - c.x);
+            const diff = ((target - c._wanderAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+            c._wanderAngle += diff * 0.04 * Math.abs(wallBias) / (Math.PI * 0.5);
+        }
+
+        desiredX = Math.cos(c._wanderAngle) * c.speed;
+        desiredY = Math.sin(c._wanderAngle) * c.speed;
     }
 
-    if(c._scared<=0){ const mt=.015; c.vx+=clamp((desiredX-c.vx)*.025,-mt,mt); c.vy+=clamp((desiredY-c.vy)*.025,-mt,mt); }
+    if(c._scared<=0){
+        const mt = c.diet === 'herb' ? .015 : .04;
+        const smoothing = c.diet === 'herb' ? .025 : .08;
+        c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
+        c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+    }
     const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
     const szPen=clamp(1-(c.size-12)*.008,.5,1);
     const maxSpd=c._scared>0?c.speed*3.5:c.speed*szPen*(c._crowdFactor||1);
     if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
     if(c._scared>0){c.vx*=.97;c.vy*=.97;}
     if(spd<.05&&c._scared<=0){c.vx+=rnd(-.04,.04);c.vy+=rnd(-.04,.04);}
-    const pad=80;
-    if(c.x<pad)c.vx+=.05; if(c.x>W-pad)c.vx-=.05;
-    if(c.y<pad)c.vy+=.05; if(c.y>H-pad)c.vy-=.05;
-    c.x+=c.vx; c.y+=c.vy;
+    // Soft gradient boundary push
+    const pad = 120;
+    if(c.x < pad)     c.vx += (pad - c.x) / pad * 0.3;
+    if(c.x > W - pad) c.vx -= (c.x - (W - pad)) / pad * 0.3;
+    if(c.y < pad)     c.vy += (pad - c.y) / pad * 0.3;
+    if(c.y > H - pad) c.vy -= (c.y - (H - pad)) / pad * 0.3;
+
+    // Hard reflect at true edge
+    const hardPad = 20;
+    if(c.x < hardPad)     { c.vx = Math.abs(c.vx) + 0.2; c._wanderAngle = rnd(-0.5, 0.5); }
+    if(c.x > W - hardPad) { c.vx = -(Math.abs(c.vx) + 0.2); c._wanderAngle = Math.PI + rnd(-0.5, 0.5); }
+    if(c.y < hardPad)     { c.vy = Math.abs(c.vy) + 0.2; }
+    if(c.y > H - hardPad) { c.vy = -(Math.abs(c.vy) + 0.2); }
+
+    c.x += c.vx; c.y += c.vy;
 
     const reproRate=c.reproduce*godMode.mutMult;
-    if(c.energy>130&&mateFound&&Math.random()<reproRate&&creatures.length<POP_CAP){
+    // Per-species density pressure: halve reproduce chance if species already has >40% of total pop
+    const speciesCount=creatures.filter(x=>x.species===c.species).length;
+    const densityPenalty=speciesCount/(creatures.length||1)>0.4?0.4:1.0;
+    // Herbs need extra energy (160→170) and a mate with energy 130+; all need global cap
+    const energyThreshold = c.diet === 'herb' ? 170 : 130;
+    const mateEnergyMin   = c.diet === 'herb' ? 130 : 90;
+    const mateOk=mateFound&&mateFound.energy>mateEnergyMin;
+    if(c.energy>energyThreshold&&mateOk&&Math.random()<reproRate*densityPenalty&&creatures.length<POP_CAP){
         c.reproduced=true; mateFound.energy*=.6; c.energy*=.45;
         const child=spawnCreature(c.species,c.x+rnd(-20,20),c.y+rnd(-20,20),c);
         c._children.push(child.id); newChildren.push(child);
@@ -649,6 +965,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const sp=creatures.filter(x=>x.species===c.species);
         if(sp.length){ const avgSz=sp.reduce((a,x)=>a+x.size,0)/sp.length, avgSpd=sp.reduce((a,x)=>a+x.speed,0)/sp.length; traitHistory[c.species].push({gen:child.generation,avgSize:avgSz,avgSpeed:avgSpd}); if(traitHistory[c.species].length>50) traitHistory[c.species].shift(); }
     }
+    // Reset reproduced flag after a cooldown so predators can mate again
+    if(c.reproduced && c.energy>120 && c.age%300===0) c.reproduced=false;
     c.energy=clamp(c.energy,0,200);
     return true;
 }
@@ -722,7 +1040,7 @@ function closeInspect(){ inspectedCreature=null; if(inspectPanel) inspectPanel.s
 let graphCanvas,graphCtx,showGraph=false;
 function createGraphPanel(){
     graphCanvas=document.createElement('canvas'); graphCanvas.width=360; graphCanvas.height=180;
-    graphCanvas.style.cssText='position:fixed;bottom:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
+    graphCanvas.style.cssText='position:fixed;top:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
     document.body.appendChild(graphCanvas); graphCtx=graphCanvas.getContext('2d');
 }
 function drawGraph(){
@@ -827,18 +1145,19 @@ function initInput(){
 }
 
 // ── INIT & LOOP ───────────────────────────────────────────────────────────
-const stars  =Array.from({length:140},()=>new Star());
+const stars  =Array.from({length:90}, ()=>new Star());
 const planets=Array.from({length:5},  ()=>new Planet());
 const galaxies=Array.from({length:2}, ()=>new Galaxy());
 const suns   =Array.from({length:4},  ()=>new Sun());
 const comets =Array.from({length:3},  ()=>new Comet());
-const nebulas=Array.from({length:10}, ()=>new Nebula());
+const nebulas=Array.from({length:8},  ()=>new Nebula());
 
 window.addEventListener('load',()=>{ resize(); initCreatures(); createInspectPanel(); createGraphPanel(); createTraitPanel(); createGodPanel(); addGodButton(); initInput(); loop(); });
 
 let frameCount=0;
-// OPTIMIZED: track previous dayT phase to decide when bg needs refresh
 let _lastBgDayT=-1;
+// Nebula positions update every 90 frames (they barely move)
+let _nebulaUpdateTimer=0;
 
 function loop(){
     requestAnimationFrame(loop);
@@ -847,27 +1166,29 @@ function loop(){
     updateDayNight();
     for(let i=1;i<Math.floor(window._daySpeedMult||1);i++) updateDayNight();
 
-    // OPTIMIZED: rebuild spatial hash once per frame
+    // Rebuild spatial hash once per frame
     spatialHash.clear();
     creatures.forEach(c=>spatialHash.insert(c));
 
-    // OPTIMIZED: only redraw BG when day phase changes meaningfully (every ~6 frames)
-    const dayChanged=Math.abs(dayT-_lastBgDayT)>0.002;
+    // Nebulas drift very slowly — update position every 90 frames only
+    _nebulaUpdateTimer++;
+    if(_nebulaUpdateTimer>=90){ _nebulaUpdateTimer=0; nebulas.forEach(n=>n.updatePosition()); _bgDirty=true; }
+
+    // Rebuild BG cache only when day phase changes meaningfully (roughly every 10-15 frames)
+    const dayChanged=Math.abs(dayT-_lastBgDayT)>0.004;
     if(dayChanged||_bgDirty){
-        ensureBgCanvas();
-        nebulas.forEach(n=>n.update()); // still update positions
         renderBgToCache(nebulas);
         _lastBgDayT=dayT;
     }
 
-    // Blit cached background in one call — no gradient recomputation
+    // Blit cached background — single drawImage, no gradient work
     ctx.drawImage(_bgCanvas,0,0);
 
     updateDrawBlooms();
 
-    // OPTIMIZED: update stars every 2 frames, draw every frame
-    if(frameCount%2===0) stars.forEach(s=>s.update());
-    drawStarsBatched(stars); // batched by color group
+    // Stars update every 3 frames
+    if(frameCount%3===0) stars.forEach(s=>s.update());
+    drawStarsBatched(stars);
 
     galaxies.forEach(g=>{g.update();g.draw();});
     suns.forEach(s=>{s.update();s.draw();});
@@ -878,7 +1199,7 @@ function loop(){
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
     newChildren.forEach(ch=>creatures.push(ch));
 
-    Object.keys(SPECIES_DEFS).forEach(k=>{ if(!creatures.some(c=>c.species===k)){ const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4; for(let i=0;i<n;i++) creatures.push(spawnCreature(k)); } });
+    Object.keys(SPECIES_DEFS).forEach(k=>{ if(!creatures.some(c=>c.species===k)){ const n=k==='leviathan'?2:k==='shark'||k==='anglerfish'?1:2; for(let i=0;i<n;i++) creatures.push(spawnCreature(k)); } });
 
     creatures.forEach(c=>drawCreature(c));
     ctx.globalAlpha=1;
