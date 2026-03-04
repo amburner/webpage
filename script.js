@@ -2,1351 +2,823 @@
 // AMBER MILLER — MAXIMUM CHAOS EDITION
 // =============================================
 
-// ---------- Inject marquees inside each project card ----------
+// ── UI CHAOS ──────────────────────────────────────────────────────────────
 function addCardMarquees() {
-    const summaries = document.querySelectorAll('.project > summary');
-    const msgs = [
-        '🚀 SICK PROJECT ALERT 🚀',
-        '⚡ ENGINEERING EXCELLENCE ⚡',
-        '🔥 CHECK THIS OUT 🔥',
-        '💥 CONTROLS & CHAOS 💥',
-        '🛸 AEROSPACE INTENSIFIES 🛸',
-    ];
-    summaries.forEach((s, i) => {
+    const msgs = [' SICK PROJECT ALERT ',' ENGINEERING EXCELLENCE ',' CHECK THIS OUT ',' CONTROLS & CHAOS ',' AEROSPACE INTENSIFIES '];
+    document.querySelectorAll('.project > summary').forEach((s,i)=>{
         const mq = document.createElement('marquee');
-        mq.setAttribute('scrollamount', '5');
-        mq.style.cssText = `background:linear-gradient(90deg,#1a0030,#2d0050,#1a0030);color:#ff00ff;font-family:'Share Tech Mono',monospace;font-size:11px;padding:2px 0;border-top:1px solid #cc00ff;margin-top:6px;display:block;letter-spacing:2px;`;
-        mq.innerText = msgs[i % msgs.length];
+        mq.setAttribute('scrollamount','5');
+        mq.style.cssText=`background:linear-gradient(90deg,#1a0030,#2d0050,#1a0030);color:#ff00ff;font-family:'Share Tech Mono',monospace;font-size:11px;padding:2px 0;border-top:1px solid #cc00ff;margin-top:6px;display:block;letter-spacing:2px;`;
+        mq.innerText = msgs[i%msgs.length];
         s.parentElement.insertBefore(mq, s.nextSibling);
     });
 }
 
-// ---------- Sparkle effect ----------
-let lastSparkTime = 0;
-let sparkActive = true;
-const symbols = ['✶','★','⚡','💥','✨','🌟','☆','◆','♦','❋','+','˚'];
-const neonColors = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ff44aa'];
-
+let lastSparkTime=0, sparkActive=true;
+const SPARK_SYMS=['✶','★','⚡','💥','✨','🌟','☆','◆','♦','❋','+','˚'];
+const NEON=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ff44aa'];
 function createSparkle(e) {
-    if (!sparkActive) return;
-    const currentTime = Date.now();
-    if (currentTime - lastSparkTime > 40) {
-        const x = e.touches ? e.touches[0].pageX : e.pageX;
-        const y = e.touches ? e.touches[0].pageY : e.pageY;
-        const count = Math.random() < 0.4 ? 3 : 1;
-        for (let i = 0; i < count; i++) {
-            const spark = document.createElement('div');
-            spark.className = 'spark';
-            spark.innerText = symbols[Math.floor(Math.random() * symbols.length)];
-            spark.style.left = (x + (Math.random() - 0.5) * 30) + 'px';
-            spark.style.top  = (y + (Math.random() - 0.5) * 30) + 'px';
-            spark.style.setProperty('--spark-color', neonColors[Math.floor(Math.random() * neonColors.length)]);
-            spark.style.fontSize = (0.9 + Math.random() * 1.2) + 'em';
-            document.body.appendChild(spark);
-            setTimeout(() => spark.remove(), 900);
-        }
-        lastSparkTime = currentTime;
+    if(!sparkActive) return;
+    const now=Date.now(); if(now-lastSparkTime<40) return; lastSparkTime=now;
+    const x=e.touches?e.touches[0].pageX:e.pageX, y=e.touches?e.touches[0].pageY:e.pageY;
+    const n=Math.random()<0.4?3:1;
+    for(let i=0;i<n;i++){
+        const s=document.createElement('div'); s.className='spark';
+        s.innerText=SPARK_SYMS[Math.floor(Math.random()*SPARK_SYMS.length)];
+        s.style.left=(x+(Math.random()-0.5)*30)+'px'; s.style.top=(y+(Math.random()-0.5)*30)+'px';
+        s.style.setProperty('--spark-color',NEON[Math.floor(Math.random()*NEON.length)]);
+        s.style.fontSize=(0.9+Math.random()*1.2)+'em';
+        document.body.appendChild(s); setTimeout(()=>s.remove(),900);
     }
 }
-document.addEventListener('mousemove', createSparkle);
-document.addEventListener('touchmove', createSparkle);
+document.addEventListener('mousemove',createSparkle);
+document.addEventListener('touchmove',createSparkle);
 
-// ---------- Pulsing h2 colors ----------
 function animateH2s() {
-    const colors = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35'];
-    let idx = 0;
-    setInterval(() => {
-        document.querySelectorAll('h2').forEach(el => { el.style.color = colors[idx % colors.length]; });
-        idx++;
-    }, 600);
+    const cols=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35']; let i=0;
+    setInterval(()=>{ document.querySelectorAll('h2').forEach(el=>el.style.color=cols[i%cols.length]); i++; },600);
 }
-
-// ---------- Cycling card borders (no box-shadow — that was causing flashes) ----------
 function cycleBorders() {
-    const cards = document.querySelectorAll('.project');
-    const borders = ['#ff00ff','#cc00ff','#00fff5','#ff2d78','#ff6ec7','#ff6b35'];
-    let i = 0;
-    setInterval(() => {
-        cards.forEach((card, ci) => {
-            if (!card._zergDead) {
-                card.style.borderColor = borders[(i + ci) % borders.length];
-                // No box-shadow cycling — it was causing the strobe flash
-            }
-        });
-        i++;
-    }, 400);
+    const bords=['#ff00ff','#cc00ff','#00fff5','#ff2d78','#ff6ec7','#ff6b35']; let i=0;
+    setInterval(()=>{ document.querySelectorAll('.project').forEach((c,ci)=>{ if(!c._zergDead) c.style.borderColor=bords[(i+ci)%bords.length]; }); i++; },400);
 }
 
-// =============================================
-// ZERG RUSH MINIGAME
-// =============================================
+// ── ZERG RUSH ─────────────────────────────────────────────────────────────
+const ZF=['ᗤ','ᗣ','ᗡ','ᗢ'], ZC=['#aa0000','#cc2200','#ff3300','#dd1100'];
+const BSTYLES=['double','solid','dashed','dotted','none'];
+let zergActive=false, zerglings=[], zergInt=null, zergSpawnInt=null, zergScore=0, zergScoreEl=null, zergBtn=null;
 
-const ZERGLING_FRAMES = ['ᗤ','ᗣ','ᗡ','ᗢ'];
-const ZERGLING_COLORS = ['#aa0000','#cc2200','#ff3300','#dd1100'];
-const BITE_CHARS = [' ',' ','·','░'];
-
-let zergGameActive = false;
-let zerglings = [];
-let zergInterval = null;
-let zergSpawnInterval = null;
-let zergScore = 0;
-let zergScoreEl = null;
-let zergBtn = null;
-
-const BORDER_STYLES = ['double','solid','dashed','dotted','none'];
-const BORDER_WIDTHS = [6, 5, 4, 3, 2, 1, 0];
-
-function getBorderHealth(card) {
-    if (card._borderHealth === undefined) {
-        card._borderHealth = { top: 100, right: 100, bottom: 100, left: 100 };
-    }
-    return card._borderHealth;
+function getBH(card){ if(!card._bh) card._bh={top:100,right:100,bottom:100,left:100}; return card._bh; }
+function applyDmg(card,side,dmg){
+    const h=getBH(card); h[side]=Math.max(0,h[side]-dmg);
+    const hp=h[side], w=Math.round(hp/100*6), si=Math.min(4,Math.floor((1-hp/100)*5));
+    card.style[`border-${side}-width`]=w+'px'; card.style[`border-${side}-style`]=hp<=0?'none':BSTYLES[si]; card.style[`border-${side}-color`]='#ff0000';
+    setTimeout(()=>{ if(!card._zergDead) card.style[`border-${side}-color`]=''; },120);
+    if(h.top<=0&&h.right<=0&&h.bottom<=0&&h.left<=0) destroyCard(card);
 }
-
-function applyBorderDamage(card, side, dmg) {
-    const h = getBorderHealth(card);
-    h[side] = Math.max(0, h[side] - dmg);
-    const hp = h[side];
-    const w = Math.round((hp / 100) * 6);
-    const styleIdx = Math.min(BORDER_STYLES.length - 1, Math.floor((1 - hp/100) * BORDER_STYLES.length));
-    const style = hp <= 0 ? 'none' : BORDER_STYLES[styleIdx];
-    card.style[`border-${side}-width`] = w + 'px';
-    card.style[`border-${side}-style`] = style;
-    card.style[`border-${side}-color`] = '#ff0000';
-    setTimeout(() => {
-        if (!card._zergDead) card.style[`border-${side}-color`] = '';
-    }, 120);
-    if (h.top <= 0 && h.right <= 0 && h.bottom <= 0 && h.left <= 0) {
-        destroyCard(card);
+function destroyCard(card){
+    card._zergDead=true; card.style.border='none'; card.style.opacity='0.35'; card.style.filter='grayscale(1)';
+    const r=card.getBoundingClientRect(), cx=r.left+r.width/2+scrollX, cy=r.top+r.height/2+scrollY;
+    for(let i=0;i<12;i++){
+        const ex=document.createElement('div'); ex.className='spark'; ex.innerText=['💥','🔥','✶','★'][Math.floor(Math.random()*4)];
+        ex.style.left=(cx+(Math.random()-0.5)*80)+'px'; ex.style.top=(cy+(Math.random()-0.5)*80)+'px';
+        ex.style.fontSize=(1.5+Math.random()*2)+'em'; ex.style.setProperty('--spark-color','#ff4400');
+        document.body.appendChild(ex); setTimeout(()=>ex.remove(),900);
     }
 }
-
-function destroyCard(card) {
-    card._zergDead = true;
-    card.style.border = 'none';
-    card.style.opacity = '0.35';
-    card.style.filter = 'grayscale(1)';
-    const rect = card.getBoundingClientRect();
-    const cx = rect.left + rect.width/2 + window.scrollX;
-    const cy = rect.top + rect.height/2 + window.scrollY;
-    for (let i = 0; i < 12; i++) {
-        const ex = document.createElement('div');
-        ex.className = 'spark';
-        ex.innerText = ['💥','🔥','✶','★'][Math.floor(Math.random()*4)];
-        ex.style.left = (cx + (Math.random()-0.5)*80) + 'px';
-        ex.style.top  = (cy + (Math.random()-0.5)*80) + 'px';
-        ex.style.fontSize = (1.5 + Math.random()*2) + 'em';
-        ex.style.setProperty('--spark-color', '#ff4400');
-        document.body.appendChild(ex);
-        setTimeout(() => ex.remove(), 900);
-    }
+function createZergling(card,side){
+    const r=card.getBoundingClientRect(); let sx,sy,tx,ty;
+    if(side==='top'){    tx=r.left+scrollX+Math.random()*r.width; ty=r.top+scrollY;    sx=tx+(Math.random()-0.5)*240; sy=0;}
+    if(side==='bottom'){ tx=r.left+scrollX+Math.random()*r.width; ty=r.bottom+scrollY; sx=tx+(Math.random()-0.5)*240; sy=screen.height;}
+    if(side==='left'){   tx=r.left+scrollX; ty=r.top+scrollY+Math.random()*r.height;   sx=0; sy=ty+(Math.random()-0.5)*240;}
+    if(side==='right'){  tx=r.right+scrollX; ty=r.top+scrollY+Math.random()*r.height;  sx=screen.width; sy=ty+(Math.random()-0.5)*240;}
+    const el=document.createElement('div'); el.className='zergling';
+    el.style.cssText=`position:absolute;left:${sx}px;top:${sy}px;font-size:18px;color:${ZC[Math.floor(Math.random()*4)]};z-index:10000;pointer-events:auto;cursor:crosshair;user-select:none;text-shadow:0 0 4px #ff0000;transition:none;`;
+    el.innerText=ZF[0]; document.body.appendChild(el);
+    const zl={el,x:sx,y:sy,tx,ty,card,side,speed:0.8+Math.random(),frame:0,frameTimer:0,state:'moving',attackTimer:0};
+    el.addEventListener('click',()=>killZergling(zl)); el.addEventListener('touchstart',e=>{e.preventDefault();killZergling(zl);});
+    zerglings.push(zl); return zl;
 }
-
-function createZergling(targetCard, targetSide) {
-    const rect = targetCard.getBoundingClientRect();
-    const scrollY = window.scrollY;
-    const scrollX = window.scrollX;
-    let startX, startY, targetX, targetY;
-
-    switch (targetSide) {
-        case 'top':
-            targetX = rect.left + scrollX + Math.random() * rect.width;
-            targetY = rect.top  + scrollY;
-            startX  = targetX + (Math.random()-0.5)*240;
-            startY  = 0;
-            break;
-        case 'bottom':
-            targetX = rect.left + scrollX + Math.random() * rect.width;
-            targetY = rect.bottom + scrollY;
-            startX  = targetX + (Math.random()-0.5)*240;
-            startY  = screen.height;
-            break;
-        case 'left':
-            targetX = rect.left + scrollX;
-            targetY = rect.top  + scrollY + Math.random() * rect.height;
-            startX  = 0;
-            startY  = targetY + (Math.random()-0.5)*240;
-            break;
-        case 'right':
-            targetX = rect.right + scrollX;
-            targetY = rect.top   + scrollY + Math.random() * rect.height;
-            startX  = screen.width;
-            startY  = targetY + (Math.random()-0.5)*240;
-            break;
-    }
-
-    const el = document.createElement('div');
-    el.className = 'zergling';
-    el.innerText = ZERGLING_FRAMES[0];
-    el.style.cssText = `
-        position: absolute;
-        left: ${startX}px;
-        top: ${startY}px;
-        font-size: 18px;
-        color: ${ZERGLING_COLORS[Math.floor(Math.random()*ZERGLING_COLORS.length)]};
-        z-index: 10000;
-        pointer-events: auto;
-        cursor: crosshair;
-        user-select: none;
-        text-shadow: 0 0 4px #ff0000;
-        transition: none;
-    `;
-    document.body.appendChild(el);
-
-    const zl = {
-        el, x: startX, y: startY, tx: targetX, ty: targetY,
-        card: targetCard, side: targetSide,
-        speed: 0.8 + Math.random() * 1.0,
-        frame: 0, frameTimer: 0,
-        state: 'moving', attackTimer: 0, hp: 1,
-    };
-    el.addEventListener('click', () => killZergling(zl));
-    el.addEventListener('touchstart', (e) => { e.preventDefault(); killZergling(zl); });
-    zerglings.push(zl);
-    return zl;
+function killZergling(zl){
+    if(zl.state==='dead') return; zl.state='dead'; zl.el.innerText='☠'; zl.el.style.color='#888'; zl.el.style.textShadow='none';
+    zergScore++; if(zergScoreEl) zergScoreEl.innerText=`☠ KILLS: ${zergScore}`;
+    setTimeout(()=>{ zl.el.remove(); zerglings=zerglings.filter(z=>z!==zl); },500);
 }
-
-function killZergling(zl) {
-    if (zl.state === 'dead') return;
-    zl.state = 'dead';
-    zl.el.innerText = '☠';
-    zl.el.style.color = '#888';
-    zl.el.style.textShadow = 'none';
-    zl.el.style.fontSize = '14px';
-    zergScore += 1;
-    updateScore();
-    setTimeout(() => {
-        if (zl.el.parentNode) zl.el.remove();
-        zerglings = zerglings.filter(z => z !== zl);
-    }, 500);
-}
-
-function updateScore() {
-    if (zergScoreEl) zergScoreEl.innerText = `☠ KILLS: ${zergScore}`;
-}
-
-function tickZerg() {
-    zerglings.forEach(zl => {
-        if (zl.state === 'dead') return;
-        zl.frameTimer++;
-        if (zl.frameTimer % 8 === 0) {
-            zl.frame = (zl.frame + 1) % ZERGLING_FRAMES.length;
-            if (zl.state === 'moving') zl.el.innerText = ZERGLING_FRAMES[zl.frame];
-        }
-        if (zl.state === 'moving') {
-            const dx = zl.tx - zl.x;
-            const dy = zl.ty - zl.y;
-            const dist = Math.sqrt(dx*dx + dy*dy);
-            if (dist < 6) {
-                zl.state = 'attacking';
-                zl.el.innerText = '⚔';
-            } else {
-                zl.x += (dx / dist) * zl.speed;
-                zl.y += (dy / dist) * zl.speed;
-                zl.el.style.left = zl.x + 'px';
-                zl.el.style.top  = zl.y + 'px';
-            }
-        } else if (zl.state === 'attacking') {
+function tickZerg(){
+    zerglings.forEach(zl=>{
+        if(zl.state==='dead') return;
+        if(++zl.frameTimer%8===0){ zl.frame=(zl.frame+1)%4; if(zl.state==='moving') zl.el.innerText=ZF[zl.frame]; }
+        if(zl.state==='moving'){
+            const dx=zl.tx-zl.x, dy=zl.ty-zl.y, d=Math.sqrt(dx*dx+dy*dy);
+            if(d<6){ zl.state='attacking'; zl.el.innerText='⚔'; }
+            else{ zl.x+=dx/d*zl.speed; zl.y+=dy/d*zl.speed; zl.el.style.left=zl.x+'px'; zl.el.style.top=zl.y+'px'; }
+        } else {
             zl.attackTimer++;
-            const shake = (Math.random()-0.5)*3;
-            zl.el.style.left = (zl.tx + shake) + 'px';
-            zl.el.style.top  = (zl.ty + shake) + 'px';
-            if (zl.attackTimer % 20 === 0) {
-                if (!zl.card._zergDead) {
-                    applyBorderDamage(zl.card, zl.side, 8 + Math.random()*4);
-                } else {
-                    reassignZergling(zl);
-                }
-            }
-            if (zl.attackTimer % 10 === 0) {
-                zl.el.innerText = zl.attackTimer % 20 < 10 ? '⚔' : '🗡';
-            }
+            const sh=(Math.random()-0.5)*3; zl.el.style.left=(zl.tx+sh)+'px'; zl.el.style.top=(zl.ty+sh)+'px';
+            if(zl.attackTimer%20===0){ zl.card._zergDead ? reassignZergling(zl) : applyDmg(zl.card,zl.side,8+Math.random()*4); }
+            if(zl.attackTimer%10===0) zl.el.innerText=zl.attackTimer%20<10?'⚔':'🗡';
         }
     });
 }
-
-function reassignZergling(zl) {
-    const alive = Array.from(document.querySelectorAll('.project')).filter(c => !c._zergDead);
-    if (alive.length === 0) { endZergRush(); return; }
-    const card = alive[Math.floor(Math.random() * alive.length)];
-    const sides = ['top','right','bottom','left'];
-    const side  = sides[Math.floor(Math.random() * sides.length)];
-    const rect  = card.getBoundingClientRect();
-    const scrollY = window.scrollY, scrollX = window.scrollX;
-    zl.card = card; zl.side = side;
-    switch (side) {
-        case 'top':    zl.tx = rect.left+scrollX+Math.random()*rect.width; zl.ty = rect.top+scrollY; break;
-        case 'bottom': zl.tx = rect.left+scrollX+Math.random()*rect.width; zl.ty = rect.bottom+scrollY; break;
-        case 'left':   zl.tx = rect.left+scrollX; zl.ty = rect.top+scrollY+Math.random()*rect.height; break;
-        case 'right':  zl.tx = rect.right+scrollX; zl.ty = rect.top+scrollY+Math.random()*rect.height; break;
+function reassignZergling(zl){
+    const alive=Array.from(document.querySelectorAll('.project')).filter(c=>!c._zergDead);
+    if(!alive.length){ endZergRush(); return; }
+    const card=alive[Math.floor(Math.random()*alive.length)], sides=['top','right','bottom','left'], side=sides[Math.floor(Math.random()*4)];
+    const r=card.getBoundingClientRect(); zl.card=card; zl.side=side;
+    if(side==='top')    { zl.tx=r.left+scrollX+Math.random()*r.width;  zl.ty=r.top+scrollY; }
+    if(side==='bottom') { zl.tx=r.left+scrollX+Math.random()*r.width;  zl.ty=r.bottom+scrollY; }
+    if(side==='left')   { zl.tx=r.left+scrollX;  zl.ty=r.top+scrollY+Math.random()*r.height; }
+    if(side==='right')  { zl.tx=r.right+scrollX; zl.ty=r.top+scrollY+Math.random()*r.height; }
+    zl.state='moving'; zl.attackTimer=0;
+}
+function spawnWave(){
+    const cards=Array.from(document.querySelectorAll('.project')).filter(c=>!c._zergDead);
+    if(!cards.length){ endZergRush(); return; }
+    const sides=['top','right','bottom','left'], n=2+Math.floor(Math.random()*3);
+    for(let i=0;i<n;i++) createZergling(cards[Math.floor(Math.random()*cards.length)],sides[Math.floor(Math.random()*4)]);
+}
+function startZergRush(){
+    if(zergActive){ endZergRush(); return; }
+    zergActive=true; sparkActive=false; window._zergActive=true; zergScore=0; zerglings=[];
+    const ov=document.createElement('div'); ov.id='zerg-overlay';
+    ov.style.cssText='position:fixed;inset:0;z-index:9999;background:transparent;cursor:crosshair;';
+    ov.addEventListener('click',e=>{ ov.style.display='none'; const el=document.elementFromPoint(e.clientX,e.clientY); ov.style.display=''; if(el?.tagName==='SUMMARY') el.closest('details').toggleAttribute('open'); });
+    document.body.appendChild(ov);
+    document.querySelectorAll('.project').forEach(c=>{ c._bh={top:100,right:100,bottom:100,left:100}; c._zergDead=false; c.style.cssText=''; });
+    zergScoreEl=document.createElement('div'); zergScoreEl.id='zerg-score';
+    zergScoreEl.style.cssText='position:fixed;top:10px;right:14px;background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;font-size:16px;font-weight:bold;padding:6px 12px;border:3px solid #ff0000;z-index:99999;text-shadow:0 0 6px #ff0000;pointer-events:none;';
+    zergScoreEl.innerText='☠ KILLS: 0'; document.body.appendChild(zergScoreEl);
+    const msg=document.createElement('div');
+    msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;font-size:28px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;pointer-events:none;';
+    msg.innerHTML='🐞 ZERG RUSH! 🐞<br><span style="font-size:16px">CLICK THE ZERGLINGS TO KILL THEM!</span>';
+    document.body.appendChild(msg); setTimeout(()=>msg.remove(),2200);
+    zergBtn.innerText='🛑 END RUSH'; zergBtn.style.background='#ff0000'; zergBtn.style.color='#fff';
+    let wn=0; spawnWave();
+    zergSpawnInt=setInterval(()=>{ spawnWave(); wn++; },5000-250*wn);
+    zergInt=setInterval(tickZerg,16);
+}
+function endZergRush(){
+    zergActive=false; sparkActive=true; window._zergActive=false;
+    clearInterval(zergInt); clearInterval(zergSpawnInt);
+    document.getElementById('zerg-overlay')?.remove();
+    zerglings.forEach(zl=>zl.el.remove()); zerglings=[];
+    if(zergScoreEl){
+        const fin=document.createElement('div');
+        fin.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;font-size:24px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;';
+        fin.innerHTML=`🐞 RUSH OVER 🐞<br>KILLS: ${zergScore}<br><span style="font-size:14px;cursor:pointer;color:#ffff00" id="zerg-close">[ CLOSE ]</span>`;
+        document.body.appendChild(fin);
+        document.getElementById('zerg-close').addEventListener('click',()=>fin.remove());
+        setTimeout(()=>{ fin.parentNode&&fin.remove(); zergScoreEl.parentNode&&zergScoreEl.remove(); },4000);
     }
-    zl.state = 'moving'; zl.attackTimer = 0;
-}
-
-function spawnWave() {
-    const cards = Array.from(document.querySelectorAll('.project')).filter(c => !c._zergDead);
-    if (cards.length === 0) { endZergRush(); return; }
-    const sides = ['top','right','bottom','left'];
-    const count = 2 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < count; i++) {
-        const card = cards[Math.floor(Math.random() * cards.length)];
-        const side = sides[Math.floor(Math.random() * sides.length)];
-        createZergling(card, side);
-    }
-}
-
-function addZergOverlay() {
-    const overlay = document.createElement('div');
-    overlay.id = 'zerg-overlay';
-    overlay.style.cssText = `position:fixed;inset:0;z-index:9999;background:transparent;cursor:crosshair;`;
-    overlay.addEventListener('click', (e) => {
-        overlay.style.display = 'none';
-        const real = document.elementFromPoint(e.clientX, e.clientY);
-        overlay.style.display = '';
-        if (real && real.tagName === 'SUMMARY') {
-            real.closest('details').toggleAttribute('open');
-        }
+    document.querySelectorAll('.project').forEach(c=>{
+        c._bh=undefined; c._zergDead=false; c.style.opacity=''; c.style.filter=''; c.style.border='';
+        ['Top','Right','Bottom','Left'].forEach(s=>{ c.style[`border${s}Width`]=''; c.style[`border${s}Style`]=''; });
     });
-    document.body.appendChild(overlay);
+    zergBtn.innerText='🐞 ZERG RUSH'; zergBtn.style.background='#0d0010'; zergBtn.style.color='#ff00ff';
 }
-
-function startZergRush() {
-    if (zergGameActive) { endZergRush(); return; }
-    zergGameActive = true;
-    sparkActive = false;
-    window._zergActive = true;
-    addZergOverlay();
-    zergScore = 0;
-    zerglings = [];
-    let waveNum = 0;
-
-    document.querySelectorAll('.project').forEach(card => {
-        card._borderHealth = { top: 100, right: 100, bottom: 100, left: 100 };
-        card._zergDead = false;
-        card.style.opacity = '';
-        card.style.filter = '';
-        card.style.border = '';
-    });
-
-    zergScoreEl = document.createElement('div');
-    zergScoreEl.id = 'zerg-score';
-    zergScoreEl.style.cssText = `
-        position:fixed;top:10px;right:14px;background:#000;color:#ff0000;
-        font-family:"Comic Sans MS",monospace;font-size:16px;font-weight:bold;
-        padding:6px 12px;border:3px solid #ff0000;z-index:99999;
-        text-shadow:0 0 6px #ff0000;pointer-events:none;
-    `;
-    zergScoreEl.innerText = '☠ KILLS: 0';
-    document.body.appendChild(zergScoreEl);
-
-    const msg = document.createElement('div');
-    msg.style.cssText = `
-        position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-        background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;
-        font-size:28px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;
-        z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;pointer-events:none;
-    `;
-    msg.innerHTML = '🐞 ZERG RUSH! 🐞<br><span style="font-size:16px">CLICK THE ZERGLINGS TO KILL THEM!</span>';
-    document.body.appendChild(msg);
-    setTimeout(() => msg.remove(), 2200);
-
-    zergBtn.innerText = '🛑 END RUSH';
-    zergBtn.style.background = '#ff0000';
-    zergBtn.style.color = '#fff';
-
-    spawnWave();
-    zergSpawnInterval = setInterval(function() {
-        spawnWave();
-        waveNum += 1;
-    }, 5000 - 250 * waveNum);
-    zergInterval = setInterval(tickZerg, 16);
+function addZergButton(){
+    zergBtn=document.createElement('button');
+    zergBtn.innerText='🐞 ZERG RUSH';
+    zergBtn.style.cssText='position:fixed;bottom:18px;left:18px;z-index:99998;background:#0d0010;color:#ff00ff;font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid #ff00ff;cursor:pointer;text-shadow:0 0 8px #ff00ff;box-shadow:0 0 15px rgba(255,0,255,0.4);letter-spacing:1px;';
+    zergBtn.addEventListener('click',startZergRush); document.body.appendChild(zergBtn);
 }
-
-function endZergRush() {
-    zergGameActive = false;
-    sparkActive = true;
-    window._zergActive = false;
-    clearInterval(zergInterval);
-    clearInterval(zergSpawnInterval);
-    const overlay = document.getElementById('zerg-overlay');
-    if (overlay) overlay.remove();
-
-    zerglings.forEach(zl => { if (zl.el.parentNode) zl.el.remove(); });
-    zerglings = [];
-
-    if (zergScoreEl) {
-        const final = document.createElement('div');
-        final.style.cssText = `
-            position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-            background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;
-            font-size:24px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;
-            z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;
-        `;
-        final.innerHTML = `🐞 RUSH OVER 🐞<br>KILLS: ${zergScore}<br><span style="font-size:14px;cursor:pointer;color:#ffff00" id="zerg-close">[ CLOSE ]</span>`;
-        document.body.appendChild(final);
-        document.getElementById('zerg-close').addEventListener('click', () => final.remove());
-        setTimeout(() => { if (final.parentNode) final.remove(); }, 4000);
-        setTimeout(() => { if (zergScoreEl && zergScoreEl.parentNode) zergScoreEl.remove(); }, 4000);
-    }
-
-    document.querySelectorAll('.project').forEach(card => {
-        card._borderHealth = undefined;
-        card._zergDead = false;
-        card.style.opacity = '';
-        card.style.filter = '';
-        card.style.border = '';
-        ['Top','Right','Bottom','Left'].forEach(s => {
-            card.style[`border${s}Width`] = '';
-            card.style[`border${s}Style`] = '';
-        });
-    });
-
-    zergBtn.innerText = '🐞 ZERG RUSH';
-    zergBtn.style.background = '#0d0010';
-    zergBtn.style.color = '#ff00ff';
-}
-
-function addZergButton() {
-    zergBtn = document.createElement('button');
-    zergBtn.innerText = '🐞 ZERG RUSH';
-    zergBtn.style.cssText = `
-        position:fixed;bottom:18px;left:18px;z-index:99998;
-        background:#0d0010;color:#ff00ff;font-family:"Comic Sans MS",monospace;
-        font-size:15px;font-weight:bold;padding:10px 18px;
-        border:2px solid #ff00ff;cursor:pointer;
-        text-shadow:0 0 8px #ff00ff;box-shadow:0 0 15px rgba(255,0,255,0.4);
-        letter-spacing:1px;
-    `;
-    zergBtn.addEventListener('click', startZergRush);
-    document.body.appendChild(zergBtn);
-}
-
-function addHideButton() {
-    const btn = document.createElement('button');
-    btn.innerText = '🙈 HIDE PROJECTS';
-    btn.style.cssText = `
-        position:fixed;bottom:70px;left:18px;z-index:99998;
-        background:#0d0010;color:#cc00ff;font-family:"Comic Sans MS",monospace;
-        font-size:15px;font-weight:bold;padding:10px 18px;
-        border:2px solid #cc00ff;cursor:pointer;
-        text-shadow:0 0 8px #cc00ff;box-shadow:0 0 15px rgba(204,0,255,0.4);
-        letter-spacing:1px;
-    `;
-    let hidden = false;
-    btn.addEventListener('click', () => {
-        hidden = !hidden;
-        document.querySelectorAll('.project').forEach(p => {
-            p.style.visibility = hidden ? 'hidden' : '';
-        });
-        btn.innerText = hidden ? '👁 SHOW PROJECTS' : '🙈 HIDE PROJECTS';
-        btn.style.color = hidden ? '#00fff5' : '#cc00ff';
-        btn.style.borderColor = hidden ? '#00fff5' : '#cc00ff';
-        btn.style.textShadow = hidden ? '0 0 8px #00fff5' : '0 0 8px #cc00ff';
-        btn.style.boxShadow = hidden ? '0 0 15px rgba(0,255,245,0.4)' : '0 0 15px rgba(204,0,255,0.4)';
+function addHideButton(){
+    const btn=document.createElement('button');
+    btn.innerText='🙈 HIDE PROJECTS';
+    btn.style.cssText='position:fixed;bottom:70px;left:18px;z-index:99998;background:#0d0010;color:#cc00ff;font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid #cc00ff;cursor:pointer;text-shadow:0 0 8px #cc00ff;box-shadow:0 0 15px rgba(204,0,255,0.4);letter-spacing:1px;';
+    let hidden=false;
+    const ECO=new Set(['ecosystem-canvas','eco-inspect','eco-god']);
+    btn.addEventListener('click',()=>{
+        hidden=!hidden;
+        Array.from(document.body.children).forEach(el=>{ if(ECO.has(el.id)||el.tagName==='BUTTON'||el.tagName==='CANVAS') return; el.style.visibility=hidden?'hidden':''; el.style.pointerEvents=hidden?'none':''; });
+        btn.innerText=hidden?'👁 SHOW PROJECTS':'🙈 HIDE PROJECTS';
+        const c=hidden?'#00fff5':'#cc00ff'; btn.style.color=c; btn.style.borderColor=c; btn.style.textShadow=`0 0 8px ${c}`; btn.style.boxShadow=`0 0 15px ${c}44`;
     });
     document.body.appendChild(btn);
 }
-
-// ---------- Boot ----------
-document.addEventListener('DOMContentLoaded', () => {
-    addCardMarquees();
-    animateH2s();
-    cycleBorders();
-    addZergButton();
-    addHideButton();
-});
+document.addEventListener('DOMContentLoaded',()=>{ addCardMarquees(); animateH2s(); cycleBorders(); addZergButton(); addHideButton(); });
 
 // =============================================
-// COSMIC AQUATIC ECOSYSTEM
+// COSMIC ECOSYSTEM
 // =============================================
+(function(){
 
-(function() {
+const canvas=document.createElement('canvas');
+canvas.id='ecosystem-canvas';
+canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;';
+document.addEventListener('DOMContentLoaded',()=>document.body.prepend(canvas));
+const ctx=canvas.getContext('2d');
+let W,H;
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+window.addEventListener('load',resize); window.addEventListener('resize',resize);
 
-const canvas = document.createElement('canvas');
-canvas.id = 'ecosystem-canvas';
-canvas.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;`;
-document.addEventListener('DOMContentLoaded', () => document.body.prepend(canvas));
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const PALETTE=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ffffaa','#aaffff','#ff4400','#cc2200','#ff8800','#4400cc','#0044ff','#00ccff','#ff0044'];
 
-const ctx = canvas.getContext('2d');
-let W, H;
-
-function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
-window.addEventListener('load', resize);
-window.addEventListener('resize', resize);
-
-const rnd   = (a,b) => a + Math.random()*(b-a);
-const pick  = arr  => arr[Math.floor(Math.random()*arr.length)];
-const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
-
-const PALETTE = ['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ffffaa','#aaffff'];
-
-// =====================
-// DAY/NIGHT CYCLE
-// =====================
-let dayPhase = 0; // 0=day 1=night, cycles over DAY_LEN frames
-const DAY_LEN = 7200; // ~2 min full cycle
-let dayT = 0; // 0..1
-
-function updateDayNight() {
-    dayT = (Math.sin(dayPhase * Math.PI * 2 / DAY_LEN) + 1) / 2; // 0=night 1=day
-    dayPhase = (dayPhase + 1) % DAY_LEN;
-}
-
-function drawDayNight() {
-    // Overlay tint: deep blue at night, transparent at day
-    const nightAlpha = (1 - dayT) * 0.45;
-    if (nightAlpha > 0.01) {
-        ctx.globalAlpha = nightAlpha;
-        ctx.fillStyle = '#000033';
-        ctx.fillRect(0, 0, W, H);
-        ctx.globalAlpha = 1;
+// ── DAY/NIGHT ─────────────────────────────────────────────────────────────
+let dayPhase=0, dayT=0;
+const DAY_LEN=7200;
+function updateDayNight(){ dayT=(Math.sin(dayPhase*Math.PI*2/DAY_LEN)+1)/2; dayPhase=(dayPhase+1)%DAY_LEN; }
+function drawDayNight(){
+    const night=1-dayT;
+    ctx.fillStyle=night>0.5?'rgba(4,0,10,1)':'rgba(26,0,40,1)'; ctx.fillRect(0,0,W,H);
+    if(night>0.05){
+        ctx.globalAlpha=night*0.75;
+        const ng=ctx.createRadialGradient(W*.3,H*.4,0,W*.5,H*.5,Math.max(W,H)*.9);
+        ng.addColorStop(0,'#1a000a'); ng.addColorStop(.2,'#0a0025'); ng.addColorStop(.5,'#15000f'); ng.addColorStop(.8,'#060020'); ng.addColorStop(1,'#000000');
+        ctx.fillStyle=ng; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+    }
+    if(night>0.3){
+        ctx.globalAlpha=(night-0.3)*0.5;
+        [0,1,2,3].forEach(i=>{
+            const ax=W*(0.15+i*0.22)+Math.sin(dayPhase*0.002+i)*40;
+            const ag=ctx.createLinearGradient(ax,0,ax+80,H*0.45);
+            const cols=[['#ff00ff','#cc00ff'],['#00fff5','#0044ff'],['#ff2d78','#880022'],['#dd88ff','#440066']];
+            ag.addColorStop(0,cols[i][0]+'66'); ag.addColorStop(.5,cols[i][1]+'33'); ag.addColorStop(1,'transparent');
+            ctx.fillStyle=ag; ctx.beginPath(); ctx.moveTo(ax-20,0); ctx.lineTo(ax+60,0); ctx.lineTo(ax+80,H*.45); ctx.lineTo(ax,H*.45); ctx.fill();
+        });
+        ctx.globalAlpha=1;
+    }
+    const tt=1-Math.abs(dayT-0.5)*2;
+    if(tt>0.05){
+        ctx.globalAlpha=tt*0.65;
+        const dg=ctx.createLinearGradient(0,0,0,H);
+        if(dayT>0.5){ dg.addColorStop(0,'transparent'); dg.addColorStop(.55,'#ff440044'); dg.addColorStop(.75,'#ff880088'); dg.addColorStop(.9,'#ffaa00aa'); dg.addColorStop(1,'#ff660088'); }
+        else        { dg.addColorStop(0,'transparent'); dg.addColorStop(.5,'#cc220044'); dg.addColorStop(.75,'#880000aa'); dg.addColorStop(1,'#ff0044aa'); }
+        ctx.fillStyle=dg; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+    }
+    if(dayT>0.3){
+        ctx.globalAlpha=(dayT-0.3)*0.25;
+        const dg2=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.5,Math.max(W,H)*.7);
+        dg2.addColorStop(0,'#2d0050'); dg2.addColorStop(.5,'#1a0030'); dg2.addColorStop(1,'transparent');
+        ctx.fillStyle=dg2; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
     }
 }
 
-// =====================
-// FOOD BLOOMS
-// =====================
-let foodBlooms = [];
-let isDragging = false;
-let dragBloomTimer = 0;
-
-function addFoodBloom(x, y) {
-    foodBlooms.push({ x, y, r: 60, life: 300, maxLife: 300 });
-}
-
-function updateDrawBlooms() {
-    foodBlooms = foodBlooms.filter(b => b.life > 0);
-    foodBlooms.forEach(b => {
+// ── FOOD BLOOMS ───────────────────────────────────────────────────────────
+let foodBlooms=[], isDragging=false, dragBloomTimer=0;
+function addFoodBloom(x,y){ foodBlooms.push({x,y,r:60,life:300,maxLife:300}); }
+function updateDrawBlooms(){
+    foodBlooms=foodBlooms.filter(b=>b.life>0);
+    foodBlooms.forEach(b=>{
         b.life--;
-        const alpha = (b.life / b.maxLife) * 0.4;
-        ctx.globalAlpha = alpha;
-        const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r);
-        grd.addColorStop(0, '#00ffaa');
-        grd.addColorStop(1, 'transparent');
-        ctx.fillStyle = grd;
-        ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
+        ctx.globalAlpha=(b.life/b.maxLife)*0.4;
+        const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r); g.addColorStop(0,'#00ffaa'); g.addColorStop(1,'transparent');
+        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
     });
 }
 
-// =====================
-// CELESTIAL
-// =====================
+// ── CELESTIAL OBJECTS ─────────────────────────────────────────────────────
 class Star {
-    constructor() { this.reset(true); }
-    reset(init) {
-        this.x = rnd(0,W||1200); this.y = rnd(0,H||800);
-        this.r = rnd(0.3,1.8); this.spd = rnd(0.02,0.15);
-        this.dir = rnd(0,Math.PI*2); this.twinkle = rnd(0,Math.PI*2);
-        this.twinkleSpd = rnd(0.02,0.05);
-        this.color = pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']);
-    }
-    update() {
-        this.x += Math.cos(this.dir)*this.spd; this.y += Math.sin(this.dir)*this.spd;
-        this.twinkle += this.twinkleSpd;
-        if(this.x<-5||this.x>W+5||this.y<-5||this.y>H+5) this.reset(false);
-    }
-    draw() {
-        const alpha = (0.4 + 0.5*Math.sin(this.twinkle)) * (0.4 + 0.6*dayT);
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = this.color;
-        ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
-        ctx.globalAlpha = 1;
-    }
+    constructor(){ this.reset(true); }
+    reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(.3,1.8); this.spd=rnd(.02,.15); this.dir=rnd(0,Math.PI*2); this.tw=rnd(0,Math.PI*2); this.twSpd=rnd(.02,.05); this.col=pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']); }
+    update(){ this.x+=Math.cos(this.dir)*this.spd; this.y+=Math.sin(this.dir)*this.spd; this.tw+=this.twSpd; if(this.x<-5||this.x>W+5||this.y<-5||this.y>H+5) this.reset(false); }
+    draw(){ ctx.globalAlpha=(0.4+0.5*Math.sin(this.tw))*(0.4+0.6*dayT); ctx.fillStyle=this.col; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
 }
-
 class Planet {
-    constructor() { this.reset(true); }
-    reset(init) {
-        this.r = rnd(18,52);
-        this.x = init ? rnd(0,W||1200) : (Math.random()<0.5 ? -this.r-10 : (W||1200)+this.r+10);
-        this.y = rnd(this.r,(H||800)-this.r);
-        this.spd = rnd(0.04,0.2);
-        this.dx = (this.x<0?1:-1)*this.spd; this.dy = rnd(-0.04,0.04);
-        this.color = pick(PALETTE); this.color2 = pick(PALETTE);
-        this.rings = Math.random()<0.4; this.ringTilt = rnd(0.2,0.6);
-        this.rot = rnd(0,Math.PI*2); this.rotSpd = rnd(-0.004,0.004);
-        this.grav = this.r*7; this.mass = this.r*0.5;
-    }
-    update() {
-        this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd;
-        if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false);
-    }
-    draw() {
+    constructor(){ this.reset(true); }
+    reset(init){ this.r=rnd(18,52); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-10:(W||1200)+this.r+10); this.y=rnd(this.r,(H||800)-this.r); this.spd=rnd(.04,.2); this.dx=(this.x<0?1:-1)*this.spd; this.dy=rnd(-.04,.04); this.col=pick(PALETTE); this.col2=pick(PALETTE); this.rings=Math.random()<.4; this.ringTilt=rnd(.2,.6); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.004,.004); this.grav=this.r*7; }
+    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false); }
+    draw(){
         ctx.save(); ctx.translate(this.x,this.y);
-        const grd = ctx.createRadialGradient(0,0,this.r*0.5,0,0,this.r*2);
-        grd.addColorStop(0,this.color+'22'); grd.addColorStop(1,'transparent');
-        ctx.fillStyle=grd; ctx.beginPath(); ctx.arc(0,0,this.r*2,0,Math.PI*2); ctx.fill();
-        const bg = ctx.createRadialGradient(-this.r*0.3,-this.r*0.3,this.r*0.1,0,0,this.r);
-        bg.addColorStop(0,'#ffffff33'); bg.addColorStop(0.4,this.color); bg.addColorStop(1,this.color2);
-        ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
-        if(this.rings) {
-            ctx.save(); ctx.scale(1,this.ringTilt);
-            ctx.strokeStyle=this.color+'88'; ctx.lineWidth=this.r*0.16;
-            ctx.beginPath(); ctx.arc(0,0,this.r*1.55,0,Math.PI*2); ctx.stroke();
-            ctx.restore();
-        }
+        const g1=ctx.createRadialGradient(0,0,this.r*.5,0,0,this.r*2); g1.addColorStop(0,this.col+'22'); g1.addColorStop(1,'transparent'); ctx.fillStyle=g1; ctx.beginPath(); ctx.arc(0,0,this.r*2,0,Math.PI*2); ctx.fill();
+        const g2=ctx.createRadialGradient(-this.r*.3,-this.r*.3,this.r*.1,0,0,this.r); g2.addColorStop(0,'#ffffff33'); g2.addColorStop(.4,this.col); g2.addColorStop(1,this.col2); ctx.fillStyle=g2; ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+        if(this.rings){ ctx.save(); ctx.scale(1,this.ringTilt); ctx.strokeStyle=this.col+'88'; ctx.lineWidth=this.r*.16; ctx.beginPath(); ctx.arc(0,0,this.r*1.55,0,Math.PI*2); ctx.stroke(); ctx.restore(); }
         ctx.restore();
     }
 }
-
 class Galaxy {
-    constructor() { this.reset(true); }
-    reset(init) {
-        this.r = rnd(40,100);
-        this.x = init ? rnd(0,W||1200) : (Math.random()<0.5 ? -this.r-20 : (W||1200)+this.r+20);
-        this.y = rnd(this.r,(H||800)-this.r);
-        this.spd = rnd(0.01,0.07); this.dx = (this.x<0?1:-1)*this.spd;
-        this.rot = rnd(0,Math.PI*2); this.rotSpd = rnd(-0.002,0.002);
-        this.arms = Math.floor(rnd(2,5));
-        this.color = pick(PALETTE); this.color2 = pick(PALETTE);
-        this.grav = this.r*6; this.mass = this.r*0.3;
-    }
-    update() { this.x+=this.dx; this.rot+=this.rotSpd; if(this.x<-this.r-80||this.x>W+this.r+80) this.reset(false); }
-    draw() {
+    constructor(){ this.reset(true); }
+    reset(init){ this.r=rnd(40,100); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-20:(W||1200)+this.r+20); this.y=rnd(this.r,(H||800)-this.r); this.dx=(this.x<0?1:-1)*rnd(.01,.07); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.002,.002); this.arms=Math.floor(rnd(2,5)); this.col=pick(PALETTE); this.col2=pick(PALETTE); this.grav=this.r*6; }
+    update(){ this.x+=this.dx; this.rot+=this.rotSpd; if(this.x<-this.r-80||this.x>W+this.r+80) this.reset(false); }
+    draw(){
         ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot);
-        const cg = ctx.createRadialGradient(0,0,0,0,0,this.r*0.4);
-        cg.addColorStop(0,'#ffffff66'); cg.addColorStop(0.3,this.color+'99'); cg.addColorStop(1,'transparent');
-        ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,this.r*0.4,0,Math.PI*2); ctx.fill();
-        for(let a=0;a<this.arms;a++) {
-            ctx.save(); ctx.rotate((Math.PI*2/this.arms)*a);
-            const ag = ctx.createLinearGradient(0,0,this.r,0);
-            ag.addColorStop(0,this.color+'88'); ag.addColorStop(1,'transparent');
-            ctx.strokeStyle=ag; ctx.lineWidth=this.r*0.15;
-            ctx.beginPath(); ctx.moveTo(0,0);
-            for(let t=0;t<1;t+=0.03){ const ang=t*Math.PI*1.5,rad=t*this.r; ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad); }
-            ctx.stroke(); ctx.restore();
-        }
+        const cg=ctx.createRadialGradient(0,0,0,0,0,this.r*.4); cg.addColorStop(0,'#ffffff66'); cg.addColorStop(.3,this.col+'99'); cg.addColorStop(1,'transparent'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,this.r*.4,0,Math.PI*2); ctx.fill();
+        for(let a=0;a<this.arms;a++){ ctx.save(); ctx.rotate(Math.PI*2/this.arms*a); const ag=ctx.createLinearGradient(0,0,this.r,0); ag.addColorStop(0,this.col+'88'); ag.addColorStop(1,'transparent'); ctx.strokeStyle=ag; ctx.lineWidth=this.r*.15; ctx.beginPath(); ctx.moveTo(0,0); for(let t=0;t<1;t+=.03){ const ang=t*Math.PI*1.5,rad=t*this.r; ctx.lineTo(Math.cos(ang)*rad,Math.sin(ang)*rad); } ctx.stroke(); ctx.restore(); }
         ctx.restore();
     }
 }
+class Sun {
+    constructor(){ this.reset(true); }
+    reset(init){ this.r=rnd(12,30); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-10:(W||1200)+this.r+10); this.y=rnd(this.r,(H||800)-this.r); this.dx=(this.x<0?1:-1)*rnd(.03,.12); this.dy=rnd(-.03,.03); this.col=pick(['#ffffff','#ffe8aa','#ffcc44','#ffaa22','#ff8800']); this.pulse=rnd(0,Math.PI*2); this.pulseSpd=rnd(.02,.05); this.grav=this.r*5; }
+    update(){ this.x+=this.dx; this.y+=this.dy; this.pulse+=this.pulseSpd; if(this.x<-this.r-60||this.x>W+this.r+60) this.reset(false); }
+    draw(){
+        ctx.save(); ctx.translate(this.x,this.y);
+        const pr=this.r*(1.1+.15*Math.sin(this.pulse));
+        const cg=ctx.createRadialGradient(0,0,this.r*.5,0,0,pr*4); cg.addColorStop(0,this.col+'44'); cg.addColorStop(1,'transparent'); ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(0,0,pr*4,0,Math.PI*2); ctx.fill();
+        const bg=ctx.createRadialGradient(-this.r*.2,-this.r*.2,0,0,0,pr); bg.addColorStop(0,'#ffffff'); bg.addColorStop(.3,this.col); bg.addColorStop(1,this.col+'88'); ctx.fillStyle=bg; ctx.beginPath(); ctx.arc(0,0,pr,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+    }
+}
+class Comet {
+    constructor(){ this.reset(true); }
+    reset(init){ const fl=Math.random()<.5; this.y=rnd(0,H||800); this.x=init?rnd(0,W||1200):(fl?-20:(W||1200)+20); this.spd=rnd(2.5,6); this.dx=fl?this.spd:-this.spd; this.dy=rnd(-.8,.8); this.tailLen=rnd(60,160); this.r=rnd(1.5,3.5); this.col=pick(['#ffffff','#aaffff','#ffeedd','#ffcc88','#88ccff']); this.life=rnd(180,400); this.maxLife=this.life; }
+    update(){ this.x+=this.dx; this.y+=this.dy; this.life--; if(this.life<=0||this.x<-200||this.x>W+200) this.reset(false); }
+    draw(){
+        const alpha=Math.min(1,this.life/30)*.85, angle=Math.atan2(this.dy,this.dx);
+        ctx.save(); ctx.globalAlpha=alpha;
+        const tg=ctx.createLinearGradient(this.x,this.y,this.x-Math.cos(angle)*this.tailLen,this.y-Math.sin(angle)*this.tailLen);
+        tg.addColorStop(0,this.col+'cc'); tg.addColorStop(1,'transparent');
+        ctx.strokeStyle=tg; ctx.lineWidth=this.r*1.2; ctx.beginPath(); ctx.moveTo(this.x,this.y); ctx.lineTo(this.x-Math.cos(angle)*this.tailLen,this.y-Math.sin(angle)*this.tailLen); ctx.stroke();
+        ctx.fillStyle=this.col; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; ctx.restore();
+    }
+}
+class Nebula {
+    constructor(){ this.reset(true); }
+    reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(120,320); this.col=pick(['#cc2200','#ff4400','#4400cc','#880044','#cc0044','#ff6600','#220066','#660022']); this.col2=pick(['#ff0000','#cc4400','#000044','#aa0022','#ff2200','#4400aa']); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.0002,.0002); this.dx=rnd(-.04,.04); this.dy=rnd(-.02,.02); }
+    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); }
+    draw(){
+        ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot); ctx.globalAlpha=0.12;
+        const g=ctx.createRadialGradient(0,0,this.r*.1,0,0,this.r); g.addColorStop(0,this.col+'ff'); g.addColorStop(.4,this.col2+'cc'); g.addColorStop(1,'transparent');
+        ctx.fillStyle=g; ctx.scale(1.8,.9); ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=.07; ctx.scale(.7,1.3); ctx.beginPath(); ctx.arc(this.r*.2,0,this.r*.8,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; ctx.restore();
+    }
+}
 
-// =====================
-// CREATURES
-// =====================
-let generationCount = 0;
-let creatureIdCounter = 0;
+// ── NEURAL NET ────────────────────────────────────────────────────────────
+// Tiny feedforward net: 8 inputs → 6 hidden (tanh) → 2 outputs
+// Weights stored on creature, mutated on birth. Pure evolutionary, no backprop.
+const NN_IN=8, NN_H=6, NN_OUT=2;
+const NN_W = NN_IN*NN_H + NN_H*NN_OUT + NN_H + NN_OUT; // total weights
 
-const SPECIES_DEFS = {
-    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0],sense:60, reproduce:0.008, activeAtNight:true },
-    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8],sense:80, reproduce:0.007, activeAtNight:false},
-    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5],sense:40, reproduce:0.009, activeAtNight:false},
-    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4],sense:120,reproduce:0.004, activeAtNight:true },
-    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9],sense:100,reproduce:0.004, activeAtNight:true },
-    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[28,50], speed:[0.2,0.6],sense:160,reproduce:0.0015,activeAtNight:true },
+function randomWeights(){ return Float32Array.from({length:NN_W},()=>rnd(-1,1)); }
+function mutateWeights(w, rate=0.08){
+    const out = new Float32Array(w);
+    for(let i=0;i<out.length;i++) if(Math.random()<rate) out[i]=clamp(out[i]+rnd(-.3,.3),-2,2);
+    return out;
+}
+function nnForward(w, inputs){
+    // Unpack: w1[IN×H], b1[H], w2[H×OUT], b2[OUT]
+    let idx=0;
+    const w1=w.slice(idx, idx+=NN_IN*NN_H);
+    const b1=w.slice(idx, idx+=NN_H);
+    const w2=w.slice(idx, idx+=NN_H*NN_OUT);
+    const b2=w.slice(idx, idx+=NN_OUT);
+    // Hidden layer
+    const h=new Float32Array(NN_H);
+    for(let j=0;j<NN_H;j++){
+        let s=b1[j];
+        for(let i=0;i<NN_IN;i++) s+=inputs[i]*w1[j*NN_IN+i];
+        h[j]=Math.tanh(s);
+    }
+    // Output layer
+    const out=new Float32Array(NN_OUT);
+    for(let k=0;k<NN_OUT;k++){
+        let s=b2[k];
+        for(let j=0;j<NN_H;j++) s+=h[j]*w2[k*NN_H+j];
+        out[k]=Math.tanh(s);
+    }
+    return out;
+}
+
+// ── CREATURES ─────────────────────────────────────────────────────────────
+let generationCount=0, creatureIdCounter=0;
+const SPECIES_DEFS={
+    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0], sense:60,  reproduce:0.004, activeAtNight:true },
+    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8], sense:80,  reproduce:0.003, activeAtNight:false},
+    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5], sense:40,  reproduce:0.004, activeAtNight:false},
+    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4], sense:120, reproduce:0.0008,activeAtNight:true },
+    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9], sense:100, reproduce:0.0008,activeAtNight:true },
+    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[40,80], speed:[0.30,0.75],sense:200,reproduce:0.0003,activeAtNight:true },
 };
+let creatures=[], evoLog=[];
+let popHistory={jellyfish:[],manta:[],seahorse:[],shark:[],anglerfish:[],leviathan:[]};
+const POP_MAX=120, POP_CAP=200;
+let traitHistory={};
 
-let creatures = [];
-let evoLog = [];
+function lineageDrift(hex){
+    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
+    return '#'+[r,g,b].map(v=>clamp(v+Math.floor(rnd(-10,10)),0,255).toString(16).padStart(2,'0')).join('');
+}
 
-// Population history for graph (sample every 120 frames)
-let popHistory = { jellyfish:[], manta:[], seahorse:[], shark:[], anglerfish:[], leviathan:[] };
-const POP_HISTORY_MAX = 120;
-
-// Trait history for trait tracking
-let traitHistory = {}; // species -> [{gen, avgSize, avgSpeed}]
-
-function spawnCreature(speciesKey, x, y, parent) {
-    const def = SPECIES_DEFS[speciesKey];
-    const mutate = (v,range) => parent ? clamp(v+rnd(-range*2,range*2),range*0.05,range*25) : v;
-    const id = creatureIdCounter++;
+function spawnCreature(key, x, y, parent){
+    const def=SPECIES_DEFS[key];
+    const mut=(v,r)=>parent?clamp(v+rnd(-r*2,r*2),r*.05,r*25):v;
     return {
-        id, species:speciesKey, diet:def.diet,
+        id:creatureIdCounter++, species:key, diet:def.diet,
         x:x??rnd(50,W-50), y:y??rnd(50,H-50),
-        vx:rnd(-0.5,0.5), vy:rnd(-0.5,0.5),
-        size:      parent?mutate(parent.size,1.2)      :rnd(def.size[0],  def.size[1]),
-        speed:     parent?mutate(parent.speed,0.08)    :rnd(def.speed[0], def.speed[1]),
-        sense:     parent?mutate(parent.sense,6)       :def.sense,
-        reproduce: parent?clamp(parent.reproduce+rnd(-0.0005,0.0008),0.0001,0.02):def.reproduce,
-        color:     parent?mutateColor(parent.color)    :def.baseColor,
-        energy:200, age:0, maxAge:rnd(2000,6000), reproduced:false,
-        frame:Math.random()*Math.PI*2, generation:parent?parent.generation+1:0,
-        parentId: parent ? parent.id : null,
-        _wanderAngle:Math.random()*Math.PI*2, _scared:0,
-        _newborn: parent ? 60 : 0, // glow timer for mutation highlight
-        _children: [],
+        vx:rnd(-.5,.5), vy:rnd(-.5,.5),
+        size:   parent?mut(parent.size,1.2)   :rnd(def.size[0],def.size[1]),
+        speed:  parent?mut(parent.speed,.08)  :rnd(def.speed[0],def.speed[1]),
+        sense:  parent?mut(parent.sense,6)    :def.sense,
+        reproduce: parent?clamp(parent.reproduce+rnd(-.0001,.0002),.00005,.003):def.reproduce,
+        color:  parent?lineageDrift(parent.color):def.baseColor,
+        energy:160, age:0, maxAge:rnd(2500,6000), reproduced:false,
+        frame:Math.random()*Math.PI*2,
+        generation: parent?parent.generation+1:0,
+        parentId: parent?parent.id:null,
+        socialTrait: parent?clamp(parent.socialTrait+rnd(-.05,.08),0,1):rnd(0,.3),
+        // Neural net weights — inherited + mutated, or random for gen0
+        nnWeights: parent ? mutateWeights(parent.nnWeights) : randomWeights(),
+        _wanderAngle:Math.random()*Math.PI*2, _scared:0, _newborn:parent?60:0, _children:[],
     };
 }
-
-function mutateColor(hex) {
-    const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-    return '#'+[r,g,b].map(v=>clamp(v+Math.floor(rnd(-25,25)),0,255).toString(16).padStart(2,'0')).join('');
-}
-
-function initCreatures() {
-    Object.keys(SPECIES_DEFS).forEach(k => {
-        const n = k==='leviathan'?2:k==='shark'||k==='anglerfish'?5:10;
+function initCreatures(){
+    Object.keys(SPECIES_DEFS).forEach(k=>{
+        const n=k==='leviathan'?2:k==='shark'||k==='anglerfish'?5:k==='seahorse'?14:10;
         for(let i=0;i<n;i++) creatures.push(spawnCreature(k));
     });
 }
 
-// ---- Drawing ----
-function drawCreature(c) {
+// ── DRAWING ───────────────────────────────────────────────────────────────
+function drawCreature(c){
     if(c._scared>0) c._scared--;
     if(c._newborn>0) c._newborn--;
-    ctx.save();
-    ctx.translate(c.x,c.y);
-    ctx.rotate(Math.atan2(c.vy,c.vx));
-    const s=c.size;
-    c.frame += 0.05*c.speed*(c._scared>0?2:1);
-    const w=Math.sin(c.frame)*s*0.15;
-
-    // Night dimming for day-only species
-    const def = SPECIES_DEFS[c.species];
-    const nightDim = def.activeAtNight ? 1.0 : 0.3 + 0.7*dayT;
-
-    // Newborn glow highlight
-    if(c._newborn>0) {
-        const glowAlpha = (c._newborn/60)*0.7;
-        ctx.globalAlpha = glowAlpha;
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath(); ctx.arc(0,0,s*1.6,0,Math.PI*2); ctx.fill();
-    }
-
-    ctx.globalAlpha = clamp(c.energy/120,0.3,1.0) * nightDim;
-    ctx.fillStyle = c._scared>0 ? '#ffffff' : c.color;
-
-    switch(c.species) {
-        case 'jellyfish':  drawJellyfish(c,s,w); break;
+    ctx.save(); ctx.translate(c.x,c.y); ctx.rotate(Math.atan2(c.vy,c.vx));
+    const s=c.size, def=SPECIES_DEFS[c.species];
+    c.frame+=.05*c.speed*(c._scared>0?2:1);
+    const w=Math.sin(c.frame)*s*.15;
+    const nightDim=def.activeAtNight?1.0:0.3+0.7*dayT;
+    if(c._newborn>0){ ctx.globalAlpha=(c._newborn/60)*.7; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,s*1.6,0,Math.PI*2); ctx.fill(); }
+    ctx.globalAlpha=clamp(c.energy/120,.3,1.0)*nightDim;
+    ctx.fillStyle=c._scared>0?'#ffffff':c.color;
+    switch(c.species){
+        case 'jellyfish':  drawJF(c,s,w); break;
         case 'manta':      drawManta(c,s,w); break;
-        case 'seahorse':   drawSeahorse(c,s,w); break;
+        case 'seahorse':   drawSH(c,s,w); break;
         case 'shark':      drawShark(c,s,w); break;
-        case 'anglerfish': drawAnglerfish(c,s,w); break;
-        case 'leviathan':  drawLeviathan(c,s,w); break;
+        case 'anglerfish': drawAF(c,s,w); break;
+        case 'leviathan':  drawLev(c,s,w); break;
     }
-
-    // Inspected creature highlight
-    if(c === inspectedCreature) {
-        ctx.globalAlpha = 0.6;
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.setLineDash([4,4]);
-        ctx.beginPath(); ctx.arc(0,0,s+6,0,Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
+    if(c===inspectedCreature){ ctx.globalAlpha=.6; ctx.strokeStyle='#ffffff'; ctx.lineWidth=2; ctx.setLineDash([4,4]); ctx.beginPath(); ctx.arc(0,0,s+6,0,Math.PI*2); ctx.stroke(); ctx.setLineDash([]); }
     ctx.restore();
 }
+function drawJF(c,s,w){ ctx.fillStyle=c.color+'99'; ctx.beginPath(); ctx.ellipse(0,0,s*.7,s*.5,0,Math.PI,0); ctx.fill(); ctx.fillStyle=c.color+'44'; ctx.beginPath(); ctx.ellipse(0,0,s*.7,s*.5,0,0,Math.PI*2); ctx.fill(); ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1; for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(i*s*.15,s*.5); ctx.quadraticCurveTo(i*s*.2+w,s+w,i*s*.1,s*1.3+Math.abs(w)); ctx.stroke(); } }
+function drawManta(c,s,w){ ctx.fillStyle=c.color+'cc'; ctx.beginPath(); ctx.moveTo(s*.8,0); ctx.quadraticCurveTo(0,-s*.5+w,-s*.8,0); ctx.quadraticCurveTo(0,s*.3-w,s*.8,0); ctx.fill(); ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-s*.8,0); ctx.quadraticCurveTo(-s,w*.5,-s*1.3,w); ctx.stroke(); }
+function drawSH(c,s,w){ ctx.strokeStyle=c.color; ctx.lineWidth=s*.22; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(0,-s*.6); ctx.quadraticCurveTo(s*.3,0,w*.3,s*.4); ctx.quadraticCurveTo(-s*.3,s*.7,0,s*.8); ctx.stroke(); ctx.fillStyle=c.color; ctx.beginPath(); ctx.ellipse(s*.1,-s*.6,s*.2,s*.14,.5,0,Math.PI*2); ctx.fill(); }
+function drawShark(c,s,w){ ctx.fillStyle=c.color+'cc'; ctx.beginPath(); ctx.moveTo(s,0); ctx.quadraticCurveTo(0,-s*.25+w*.2,-s,0); ctx.quadraticCurveTo(0,s*.2-w*.2,s,0); ctx.fill(); ctx.fillStyle=c.color; ctx.beginPath(); ctx.moveTo(0,-s*.18); ctx.lineTo(-s*.1,-s*.5); ctx.lineTo(-s*.25,-s*.18); ctx.fill(); ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(-s*1.3+w,-s*.3); ctx.lineTo(-s*1.3-w,s*.3); ctx.fill(); }
+function drawAF(c,s,w){ ctx.fillStyle=c.color+'bb'; ctx.beginPath(); ctx.ellipse(0,0,s*.8,s*.6,0,0,Math.PI*2); ctx.fill(); ctx.strokeStyle=c.color+'88'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(s*.6,-s*.3); ctx.quadraticCurveTo(s,-s*.8+w,s*.9,-s*.9); ctx.stroke(); ctx.fillStyle='#ffffaa'; ctx.beginPath(); ctx.arc(s*.9,-s*.9,s*.1,0,Math.PI*2); ctx.fill(); }
+function drawLev(c,s,w){ ctx.fillStyle=c.color+'99'; ctx.beginPath(); ctx.moveTo(s,0); ctx.bezierCurveTo(s*.3,-s*.4+w,-s*.3,s*.4-w,-s,0); ctx.bezierCurveTo(-s*.3,s*.3,s*.3,-s*.3,s,0); ctx.fill(); ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(s*.7,-s*.1,s*.07,0,Math.PI*2); ctx.fill(); }
 
-function drawJellyfish(c,s,w) {
-    ctx.fillStyle=c.color+'99';
-    ctx.beginPath(); ctx.ellipse(0,0,s*0.7,s*0.5,0,Math.PI,0); ctx.fill();
-    ctx.fillStyle=c.color+'44';
-    ctx.beginPath(); ctx.ellipse(0,0,s*0.7,s*0.5,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1;
-    for(let i=-2;i<=2;i++){
-        ctx.beginPath(); ctx.moveTo(i*s*0.15,s*0.5);
-        ctx.quadraticCurveTo(i*s*0.2+w,s+w,i*s*0.1,s*1.3+Math.abs(w)); ctx.stroke();
-    }
-}
-function drawManta(c,s,w) {
-    ctx.fillStyle=c.color+'cc';
-    ctx.beginPath(); ctx.moveTo(s*0.8,0);
-    ctx.quadraticCurveTo(0,-s*0.5+w,-s*0.8,0);
-    ctx.quadraticCurveTo(0,s*0.3-w,s*0.8,0); ctx.fill();
-    ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(-s*0.8,0); ctx.quadraticCurveTo(-s*1.0,w*0.5,-s*1.3,w); ctx.stroke();
-}
-function drawSeahorse(c,s,w) {
-    ctx.strokeStyle=c.color; ctx.lineWidth=s*0.22; ctx.lineCap='round';
-    ctx.beginPath(); ctx.moveTo(0,-s*0.6);
-    ctx.quadraticCurveTo(s*0.3,0,w*0.3,s*0.4);
-    ctx.quadraticCurveTo(-s*0.3,s*0.7,0,s*0.8); ctx.stroke();
-    ctx.fillStyle=c.color; ctx.beginPath();
-    ctx.ellipse(s*0.1,-s*0.6,s*0.2,s*0.14,0.5,0,Math.PI*2); ctx.fill();
-}
-function drawShark(c,s,w) {
-    ctx.fillStyle=c.color+'cc';
-    ctx.beginPath(); ctx.moveTo(s,0);
-    ctx.quadraticCurveTo(0,-s*0.25+w*0.2,-s,0);
-    ctx.quadraticCurveTo(0,s*0.2-w*0.2,s,0); ctx.fill();
-    ctx.fillStyle=c.color;
-    ctx.beginPath(); ctx.moveTo(0,-s*0.18); ctx.lineTo(-s*0.1,-s*0.5); ctx.lineTo(-s*0.25,-s*0.18); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(-s,0); ctx.lineTo(-s*1.3+w,-s*0.3); ctx.lineTo(-s*1.3-w,s*0.3); ctx.fill();
-}
-function drawAnglerfish(c,s,w) {
-    ctx.fillStyle=c.color+'bb';
-    ctx.beginPath(); ctx.ellipse(0,0,s*0.8,s*0.6,0,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle=c.color+'88'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.moveTo(s*0.6,-s*0.3); ctx.quadraticCurveTo(s*1.0,-s*0.8+w,s*0.9,-s*0.9); ctx.stroke();
-    ctx.fillStyle='#ffffaa';
-    ctx.beginPath(); ctx.arc(s*0.9,-s*0.9,s*0.1,0,Math.PI*2); ctx.fill();
-}
-function drawLeviathan(c,s,w) {
-    ctx.fillStyle=c.color+'99';
-    ctx.beginPath(); ctx.moveTo(s,0);
-    ctx.bezierCurveTo(s*0.3,-s*0.4+w,-s*0.3,s*0.4-w,-s,0);
-    ctx.bezierCurveTo(-s*0.3,s*0.3,s*0.3,-s*0.3,s,0); ctx.fill();
-    ctx.fillStyle='#ffffff';
-    ctx.beginPath(); ctx.arc(s*0.7,-s*0.1,s*0.07,0,Math.PI*2); ctx.fill();
-}
+// ── AI + NEURAL NET UPDATE ────────────────────────────────────────────────
+let godMode={foodMult:1.0,aggrMult:1.0,mutMult:1.0};
 
-// ---- AI ----
-// godMode settings
-let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
-
-function updateCreature(c, planets, galaxies, stars) {
+function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     c.age++;
-    const drainMult = c.reproduced ? 1.0 : 0.08;
-    const def = SPECIES_DEFS[c.species];
-    // Night penalty for day species
-    const nightPenalty = def.activeAtNight ? 1.0 : (0.3 + 0.7*dayT);
-    c.energy -= (0.012 + c.size*0.0003) * drainMult * nightPenalty;
-    c.energy += 0.35 * godMode.foodMult;
+    const def=SPECIES_DEFS[c.species];
+    const nightPenalty=def.activeAtNight?1.0:(0.3+0.7*dayT);
+    const drainMult=c.reproduced?1.0:0.1;
+    // Tuned: meaningful drain that requires active foraging
+    c.energy -= (0.22+c.size*.007)*drainMult*nightPenalty;
+    c.energy += 0.04*godMode.foodMult;
     if(c.age>c.maxAge||c.energy<=0) return false;
 
-    // Zerg rush: creatures flee screen edges
-    if(window._zergActive) {
-        const edgeFear = 150;
-        if(c.x < edgeFear) { c.vx += 0.08; c._scared = Math.max(c._scared, 10); }
-        if(c.x > W-edgeFear) { c.vx -= 0.08; c._scared = Math.max(c._scared, 10); }
-        if(c.y < edgeFear) { c.vy += 0.08; c._scared = Math.max(c._scared, 10); }
-        if(c.y > H-edgeFear) { c.vy -= 0.08; c._scared = Math.max(c._scared, 10); }
+    if(window._zergActive){
+        const ef=150;
+        if(c.x<ef) c.vx+=.08; if(c.x>W-ef) c.vx-=.08;
+        if(c.y<ef) c.vy+=.08; if(c.y>H-ef) c.vy-=.08;
+        if(Math.min(c.x,W-c.x,c.y,H-c.y)<ef) c._scared=Math.max(c._scared,10);
     }
 
+    // ── Gather sensor inputs for neural net ──────────────────────────────
+    // Find nearest threat and nearest food target
+    let threatDx=0,threatDy=0,threatD=Infinity;
+    let preyDx=0,preyDy=0,preyD=Infinity;
+    let mateDx=0,mateDy=0,mateD=Infinity, mateFound=null;
+    let foodDx=0,foodDy=0,foodD=Infinity;
+
+    creatures.forEach(o=>{
+        if(o===c||o._dead) return;
+        const dx=o.x-c.x, dy=o.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
+        // Threat
+        const isThreat=(c.diet==='herb'&&(o.diet==='carn'||o.diet==='apex'))||(c.diet==='carn'&&o.diet==='apex');
+        if(isThreat&&d<c.sense*1.5&&d<threatD){ threatDx=-dx; threatDy=-dy; threatD=d; }
+        // Prey
+        const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
+        if(isPrey&&d<c.sense*godMode.aggrMult&&d<preyD){ preyDx=dx; preyDy=dy; preyD=d; }
+        // Mate seeking: if not yet reproduced, seek same species with enough energy
+        if(!c.reproduced&&o.species===c.species&&o.energy>110&&d<c.sense*2&&d<mateD){ mateDx=dx; mateDy=dy; mateD=d; mateFound=o; }
+    });
+
+    // Nearest celestial food source
+    [...planets,...galaxies,...suns].forEach(obj=>{
+        const dx=obj.x-c.x, dy=obj.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
+        if(d<obj.grav&&d<foodD){ foodDx=dx; foodDy=dy; foodD=d; }
+    });
+    foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r*2&&d<foodD){foodDx=dx;foodDy=dy;foodD=d;} });
+
+    // Normalise inputs into [-1,1]
+    const ns=(v,mx)=>clamp(v/mx,-1,1);
+    const inputs=new Float32Array([
+        ns(threatDx,c.sense), ns(threatDy,c.sense),     // flee vector
+        ns(preyDx,c.sense),   ns(preyDy,c.sense),       // hunt vector
+        ns(foodDx,400),        ns(foodDy,400),            // food vector
+        ns(mateDx,c.sense*2), ns(mateDy,c.sense*2),     // mate vector
+    ]);
+
+    // Run net → outputs are desire weights in [-1,1]
+    const nnOut = nnForward(c.nnWeights, inputs);
+    // nnOut[0] = flee/hunt bias (negative=flee, positive=hunt/eat)
+    // nnOut[1] = food/mate bias (negative=food, positive=mate)
+
+    // ── Behaviour tree (with NN modulation) ──────────────────────────────
     let desiredX=c.vx, desiredY=c.vy, dominated=false;
 
-    if(c._scared>0) {
-        c._wanderAngle = Math.atan2(c.vy,c.vx);
+    if(c._scared>0){
+        c._wanderAngle=Math.atan2(c.vy,c.vx);
     } else {
-        // Flee threat
-        if(c.diet==='herb'||c.diet==='carn') {
-            let nDist=Infinity,threat=null;
-            creatures.forEach(t=>{
-                if(t===c||t._dead) return;
-                const is=(c.diet==='herb'&&(t.diet==='carn'||t.diet==='apex'))||(c.diet==='carn'&&t.diet==='apex');
-                if(!is) return;
-                const dx=c.x-t.x,dy=c.y-t.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<c.sense*1.5&&d<nDist){nDist=d;threat={dx,dy,d};}
-            });
-            if(threat){desiredX=threat.dx/threat.d*c.speed;desiredY=threat.dy/threat.d*c.speed;dominated=true;}
-        }
-        // Hunt
-        if(!dominated&&(c.diet==='carn'||c.diet==='apex')) {
-            const aggrSense = c.sense * godMode.aggrMult;
-            let nDist=Infinity,prey=null;
-            creatures.forEach(p=>{
-                if(p===c||p._dead) return;
-                const is=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn'));
-                if(!is) return;
-                const dx=p.x-c.x,dy=p.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<aggrSense&&d<nDist){nDist=d;prey={dx,dy,d,p};}
-            });
-            if(prey){
-                desiredX=prey.dx/prey.d*c.speed;desiredY=prey.dy/prey.d*c.speed;dominated=true;
-                if(prey.d<c.size+prey.p.size){c.energy+=prey.p.size*8;prey.p._dead=true;}
-            }
-            [...planets,...galaxies].forEach(obj=>{
-                const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy);
-                if(dist<obj.r*1.8){desiredX-=(dx/dist)*c.speed;desiredY-=(dy/dist)*c.speed;dominated=true;}
-            });
-        }
-        // Herbivore: orbit celestial, seek food bloom
-        if(!dominated&&c.diet==='herb') {
-            // Food blooms override celestial
-            let nearestBloom=null,bDist=Infinity;
-            foodBlooms.forEach(b=>{
-                const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<b.r*2&&d<bDist){bDist=d;nearestBloom={dx,dy,d,b};}
-            });
-            if(nearestBloom){
-                desiredX=nearestBloom.dx/nearestBloom.d*c.speed;
-                desiredY=nearestBloom.dy/nearestBloom.d*c.speed;
-                dominated=true;
-                if(nearestBloom.d<nearestBloom.b.r) c.energy+=1.5*godMode.foodMult;
-            }
+        const fleeWeight = clamp(0.5 - nnOut[0]*0.5, 0, 1); // high when net says flee
+        const huntWeight = clamp(0.5 + nnOut[0]*0.5, 0, 1);
+        const mateWeight = clamp(0.5 + nnOut[1]*0.5, 0, 1);
+        const foodWeight = clamp(0.5 - nnOut[1]*0.5, 0, 1);
 
-            if(!dominated){
-                let best=null,bestScore=Infinity;
-                [...planets,...galaxies].forEach(obj=>{
-                    const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy);
-                    const score=Math.abs(dist-obj.r*1.6);
-                    if(dist<obj.grav&&score<bestScore){bestScore=score;best={dx,dy,dist,obj};}
-                    if(dist<obj.r*1.2) c.energy-=0.4;
-                    else if(dist<obj.r*3.0) c.energy+=1.4*godMode.foodMult;
-                });
-                if(best){
-                    const orb=best.obj.r*1.6,diff=best.dist-orb;
-                    if(Math.abs(diff)>orb*0.2){
-                        const dir=diff>0?1:-1;
-                        desiredX=(best.dx/best.dist)*dir*c.speed;
-                        desiredY=(best.dy/best.dist)*dir*c.speed;
-                        dominated=true;
-                    }
-                }
+        // Shark crowd penalty
+        if(c.species==='shark'){ const n=creatures.filter(x=>x.species==='shark').length; c._crowdFactor=clamp(1-(n-8)*.05,.4,1); }
+        else c._crowdFactor=1;
+
+        // FLEE (modulated by NN)
+        if(threatD<Infinity && fleeWeight>0.3){
+            const d=Math.sqrt(threatDx*threatDx+threatDy*threatDy)||1;
+            desiredX=threatDx/d*c.speed*fleeWeight*2; desiredY=threatDy/d*c.speed*fleeWeight*2;
+            dominated=true; c._scared=Math.min(c._scared+2,30);
+        }
+
+        // HUNT (modulated by NN)
+        if(!dominated&&preyD<Infinity&&huntWeight>0.4){
+            const d=Math.sqrt(preyDx*preyDx+preyDy*preyDy)||1;
+            desiredX=preyDx/d*c.speed*(c._crowdFactor||1); desiredY=preyDy/d*c.speed*(c._crowdFactor||1); dominated=true;
+            // Kill if close enough
+            creatures.forEach(p=>{ if(p===c||p._dead) return; const isPrey=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!isPrey) return; const dx=p.x-c.x,dy=p.y-c.y,d2=Math.sqrt(dx*dx+dy*dy); if(d2<c.size+p.size){ c.energy+=p.size*14*(1+c.size*.04); p._dead=true; } });
+        }
+
+        // SEEK MATE (if not reproduced, NN mateBias high)
+        if(!dominated&&!c.reproduced&&mateD<Infinity&&mateWeight>0.5){
+            const d=Math.sqrt(mateDx*mateDx+mateDy*mateDy)||1;
+            desiredX=mateDx/d*c.speed; desiredY=mateDy/d*c.speed; dominated=true;
+        }
+
+        // SEEK FOOD (herbivores + hungry predators, modulated by NN)
+        if(!dominated&&(c.diet==='herb'||c.energy<80)){
+            if(foodD<Infinity&&foodWeight>0.3){
+                const d=Math.sqrt(foodDx*foodDx+foodDy*foodDy)||1;
+                desiredX=foodDx/d*c.speed; desiredY=foodDy/d*c.speed; dominated=true;
             }
-            // Stars
-            stars.forEach(s=>{
-                const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy);
-                if(d<80) c.energy+=0.4*godMode.foodMult;
-            });
-            // Herbivore passive
-            c.energy += 0.3*godMode.foodMult;
         }
-        if(!dominated){
-            c._wanderAngle+=clamp(rnd(-0.03,0.03),-0.025,0.025);
-            desiredX=Math.cos(c._wanderAngle)*c.speed;
-            desiredY=Math.sin(c._wanderAngle)*c.speed;
+
+        // Obstacle avoidance for predators near planets
+        if(c.diet==='carn'||c.diet==='apex'){
+            [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist<obj.r*1.8){desiredX-=dx/dist*c.speed;desiredY-=dy/dist*c.speed;dominated=true;} });
         }
+
+        // Energy gain from food sources
+        if(c.diet==='herb'){
+            [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<obj.r*1.2) c.energy-=.4; else if(d<obj.r*3) c.energy+=2.2*godMode.foodMult; });
+            suns.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<s.grav) c.energy+=(1-d/s.grav)*2.5*godMode.foodMult; });
+            stars.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<80) c.energy+=.6*godMode.foodMult; });
+            const edgeD=Math.min(c.x,c.y,W-c.x,H-c.y); if(edgeD<120) c.energy+=(1-edgeD/120)*1.5*godMode.foodMult;
+            c.energy+=.04*godMode.foodMult;
+        }
+        foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r) c.energy+=3*godMode.foodMult; });
     }
 
-    if(c._scared<=0){
-        const maxTurn=0.015;
-        c.vx+=clamp((desiredX-c.vx)*0.025,-maxTurn,maxTurn);
-        c.vy+=clamp((desiredY-c.vy)*0.025,-maxTurn,maxTurn);
+    // ── Emergent intelligence ─────────────────────────────────────────────
+    if(!dominated&&_complexityUnlocked){
+        const em=applyEmergent(c,creatures);
+        if(em){ desiredX=em.vx; desiredY=em.vy; dominated=true; }
     }
+
+    if(!dominated){
+        c._wanderAngle+=clamp(rnd(-.03,.03),-.025,.025);
+        desiredX=Math.cos(c._wanderAngle)*c.speed; desiredY=Math.sin(c._wanderAngle)*c.speed;
+    }
+
+    // ── Physics ───────────────────────────────────────────────────────────
+    if(c._scared<=0){ const mt=.015; c.vx+=clamp((desiredX-c.vx)*.025,-mt,mt); c.vy+=clamp((desiredY-c.vy)*.025,-mt,mt); }
     const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
-    const maxSpd=c._scared>0?c.speed*3.5:c.speed;
+    const szPen=clamp(1-(c.size-12)*.008,.5,1);
+    const maxSpd=c._scared>0?c.speed*3.5:c.speed*szPen*(c._crowdFactor||1);
     if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
-    if(c._scared>0){c.vx*=0.97;c.vy*=0.97;}
-    if(spd<0.05&&c._scared<=0){c.vx+=rnd(-0.04,0.04);c.vy+=rnd(-0.04,0.04);}
-
+    if(c._scared>0){c.vx*=.97;c.vy*=.97;}
+    if(spd<.05&&c._scared<=0){c.vx+=rnd(-.04,.04);c.vy+=rnd(-.04,.04);}
     const pad=80;
-    if(c.x<pad)c.vx+=0.05;if(c.x>W-pad)c.vx-=0.05;
-    if(c.y<pad)c.vy+=0.05;if(c.y>H-pad)c.vy-=0.05;
-
+    if(c.x<pad)c.vx+=.05; if(c.x>W-pad)c.vx-=.05;
+    if(c.y<pad)c.vy+=.05; if(c.y>H-pad)c.vy-=.05;
     c.x+=c.vx; c.y+=c.vy;
 
-    // Reproduce
-    const reproRate = c.reproduce * godMode.mutMult;
-    if(c.energy>55&&Math.random()<reproRate&&creatures.length<280){
-        c.reproduced=true;
-        c.energy*=0.65;
+    // ── Reproduce ─────────────────────────────────────────────────────────
+    const reproRate=c.reproduce*godMode.mutMult;
+    if(c.energy>130&&mateFound&&Math.random()<reproRate&&creatures.length<POP_CAP){
+        c.reproduced=true; mateFound.energy*=.6; c.energy*=.45;
         const child=spawnCreature(c.species,c.x+rnd(-20,20),c.y+rnd(-20,20),c);
-        c._children.push(child.id);
-        creatures.push(child);
-        if(child.generation>generationCount){
-            generationCount=child.generation;
-            if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`);
-        }
-        // Record trait snapshot
+        c._children.push(child.id); newChildren.push(child);
+        if(child.generation>generationCount){ generationCount=child.generation; if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`); }
         if(!traitHistory[c.species]) traitHistory[c.species]=[];
         const sp=creatures.filter(x=>x.species===c.species);
-        if(sp.length>0){
-            const avgSz=sp.reduce((a,x)=>a+x.size,0)/sp.length;
-            const avgSpd=sp.reduce((a,x)=>a+x.speed,0)/sp.length;
-            traitHistory[c.species].push({gen:child.generation,avgSize:avgSz,avgSpeed:avgSpd});
-            if(traitHistory[c.species].length>50) traitHistory[c.species].shift();
-        }
+        if(sp.length){ const avgSz=sp.reduce((a,x)=>a+x.size,0)/sp.length, avgSpd=sp.reduce((a,x)=>a+x.speed,0)/sp.length; traitHistory[c.species].push({gen:child.generation,avgSize:avgSz,avgSpeed:avgSpd}); if(traitHistory[c.species].length>50) traitHistory[c.species].shift(); }
     }
     c.energy=clamp(c.energy,0,200);
     return true;
 }
 
-// =====================
-// INSPECT PANEL
-// =====================
-let inspectedCreature = null;
-let inspectPanel = null;
-
-function createInspectPanel() {
-    inspectPanel = document.createElement('div');
-    inspectPanel.id = 'eco-inspect';
-    inspectPanel.style.cssText = `
-        position:fixed;top:50%;right:16px;transform:translateY(-50%);
-        background:#0d0010ee;border:1px solid #cc00ff;color:#e8d5f5;
-        font-family:'Share Tech Mono',monospace;font-size:11px;
-        padding:12px;z-index:9000;min-width:180px;max-width:220px;
-        display:none;line-height:1.6;pointer-events:auto;
-    `;
-    document.body.appendChild(inspectPanel);
+// ── EMERGENT INTELLIGENCE ─────────────────────────────────────────────────
+let _complexityScore=0, _complexityUnlocked=false;
+function updateComplexity(){
+    if(!creatures.length) return;
+    const n=creatures.length;
+    const avgSense=creatures.reduce((a,c)=>a+c.sense,0)/n;
+    const avgSocial=creatures.reduce((a,c)=>a+(c.socialTrait||0),0)/n;
+    const avgAge=creatures.reduce((a,c)=>a+c.age,0)/n;
+    _complexityScore=avgSense*avgSocial*(avgAge/2000);
+    _complexityUnlocked=_complexityScore>0.8;
+}
+function applyEmergent(c, all){
+    const social=c.socialTrait||0; if(social<.4) return null;
+    const nearby=all.filter(o=>{ if(o===c||o._dead) return false; const dx=o.x-c.x,dy=o.y-c.y; return Math.sqrt(dx*dx+dy*dy)<c.sense*1.2&&o.species===c.species; });
+    if(nearby.length<2) return null;
+    // Coordinated hunting
+    if((c.diet==='carn'||c.diet==='apex')&&social>.5){
+        const cx=nearby.reduce((a,o)=>a+o.x,c.x)/(nearby.length+1), cy=nearby.reduce((a,o)=>a+o.y,c.y)/(nearby.length+1);
+        let bp=null,bd=Infinity;
+        all.forEach(p=>{ if(p._dead) return; const ip=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!ip) return; const dx=p.x-cx,dy=p.y-cy,d=Math.sqrt(dx*dx+dy*dy); if(d<c.sense*2&&d<bd){bd=d;bp=p;} });
+        if(bp){ const dx=bp.x-c.x,dy=bp.y-c.y,d=Math.sqrt(dx*dx+dy*dy)||1; return {vx:dx/d*c.speed,vy:dy/d*c.speed}; }
+    }
+    // Protective circles
+    if(c.diet==='herb'&&social>.45){
+        if(nearby.some(o=>o._scared>0)||c._scared>0){
+            const cx=nearby.reduce((a,o)=>a+o.x,c.x)/(nearby.length+1), cy=nearby.reduce((a,o)=>a+o.y,c.y)/(nearby.length+1);
+            const dx=c.x-cx,dy=c.y-cy,d=Math.sqrt(dx*dx+dy*dy)||1, tr=40+nearby.length*8, diff=d-tr;
+            if(Math.abs(diff)>10){ const dir=diff>0?-1:1; return {vx:(dx/d)*dir*c.speed*.7+(-dy/d)*c.speed*.5,vy:(dy/d)*dir*c.speed*.7+(dx/d)*c.speed*.5}; }
+            return {vx:(-dy/d)*c.speed,vy:(dx/d)*c.speed};
+        }
+    }
+    // Migration waves
+    if(social>.65&&nearby.length>=3){
+        const avgVx=nearby.reduce((a,o)=>a+o.vx,0)/nearby.length, avgVy=nearby.reduce((a,o)=>a+o.vy,0)/nearby.length;
+        return {vx:avgVx*.6+c.vx*.4, vy:avgVy*.6+c.vy*.4};
+    }
+    return null;
 }
 
-function updateInspectPanel() {
+// ── INSPECT PANEL ─────────────────────────────────────────────────────────
+let inspectedCreature=null, inspectPanel=null;
+function createInspectPanel(){
+    inspectPanel=document.createElement('div'); inspectPanel.id='eco-inspect';
+    inspectPanel.style.cssText="position:fixed;top:50%;right:16px;transform:translateY(-50%);background:#0d0010ee;border:1px solid #cc00ff;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:11px;padding:12px;z-index:9000;min-width:180px;max-width:220px;display:none;line-height:1.6;pointer-events:auto;";
+    document.body.appendChild(inspectPanel);
+}
+function updateInspectPanel(){
     if(!inspectedCreature||!inspectPanel) return;
     const c=inspectedCreature;
-    // Check still alive
     if(!creatures.includes(c)){ closeInspect(); return; }
-    const def=SPECIES_DEFS[c.species];
-    const parent=creatures.find(x=>x.id===c.parentId);
-    const children=c._children.length;
-    const livingChildren = creatures.filter(x => x.parentId === c.id).length;
-    inspectPanel.innerHTML = `
+    const def=SPECIES_DEFS[c.species], par=creatures.find(x=>x.id===c.parentId);
+    // Show top 3 NN weights as a rough personality hint (purely cosmetic)
+    const topW=Array.from(c.nnWeights).slice(0,6).map(v=>v.toFixed(2)).join(' ');
+    inspectPanel.innerHTML=`
         <div style="color:${def.baseColor};font-size:13px;margin-bottom:6px">◈ ${c.species.toUpperCase()}</div>
         <div>gen: <b style="color:#ff6ec7">${c.generation}</b></div>
         <div>energy: <b style="color:${c.energy>100?'#00fff5':'#ff2d78'}">${Math.round(c.energy)}</b></div>
-        <div>size: ${c.size.toFixed(1)}</div>
-        <div>speed: ${c.speed.toFixed(2)}</div>
-        <div>sense: ${c.sense.toFixed(0)}</div>
-        <div>repro rate: ${c.reproduce.toFixed(4)}</div>
-        <div>age: ${c.age} / ${Math.round(c.maxAge)}</div>
-        <div>diet: <b>${c.diet}</b></div>
+        <div>size: ${c.size.toFixed(1)} | spd: ${c.speed.toFixed(2)}</div>
+        <div>sense: ${c.sense.toFixed(0)} | social: ${(c.socialTrait||0).toFixed(2)}</div>
+        <div>age: ${c.age}/${Math.round(c.maxAge)}</div>
+        <div>children: ${c._children.length} | parent: ${par?par.species:'none'}</div>
         <div>reproduced: <b style="color:${c.reproduced?'#00fff5':'#ff6b35'}">${c.reproduced}</b></div>
-        <div>children: ${children}</div>
-        <div>living children: ${livingChildren}</div>
-        <div>parent: ${parent?parent.species:'none'}</div>
-        <div style="color:#9b7db5;margin-top:6px;font-size:10px">right-click again to close</div>
-    `;
+        <div style="color:#9b7db5;font-size:9px;margin-top:4px;word-break:break-all">net: ${topW}…</div>
+        <div style="color:#9b7db5;font-size:10px;margin-top:4px">right-click to close</div>`;
     inspectPanel.style.display='block';
 }
+function closeInspect(){ inspectedCreature=null; if(inspectPanel) inspectPanel.style.display='none'; }
 
-function closeInspect() {
-    inspectedCreature=null;
-    if(inspectPanel) inspectPanel.style.display='none';
+// ── GRAPH ─────────────────────────────────────────────────────────────────
+let graphCanvas,graphCtx,showGraph=false;
+function createGraphPanel(){
+    graphCanvas=document.createElement('canvas'); graphCanvas.width=360; graphCanvas.height=180;
+    graphCanvas.style.cssText='position:fixed;bottom:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
+    document.body.appendChild(graphCanvas); graphCtx=graphCanvas.getContext('2d');
 }
-
-// =====================
-// POPULATION GRAPH
-// =====================
-let graphCanvas, graphCtx;
-let showGraph = false;
-
-function createGraphPanel() {
-    graphCanvas = document.createElement('canvas');
-    graphCanvas.width = 240; graphCanvas.height = 120;
-    graphCanvas.style.cssText = `
-        position:fixed;bottom:130px;right:16px;z-index:9000;
-        border:1px solid #cc00ff44;display:none;background:#0d0010cc;
-        pointer-events:none;
-    `;
-    document.body.appendChild(graphCanvas);
-    graphCtx = graphCanvas.getContext('2d');
-}
-
-function drawGraph() {
+function drawGraph(){
     if(!showGraph) return;
-    const gc=graphCtx, gw=graphCanvas.width, gh=graphCanvas.height;
-    gc.clearRect(0,0,gw,gh);
-    gc.fillStyle='#0d0010cc';
-    gc.fillRect(0,0,gw,gh);
-
-    const species=Object.keys(popHistory);
-    const maxPop=Math.max(10,...species.flatMap(s=>popHistory[s]));
-
-    species.forEach(sp=>{
-        const hist=popHistory[sp];
-        if(hist.length<2) return;
-        gc.strokeStyle=SPECIES_DEFS[sp].baseColor+'cc';
-        gc.lineWidth=1.5;
-        gc.beginPath();
-        hist.forEach((v,i)=>{
-            const x=(i/(POP_HISTORY_MAX-1))*gw;
-            const y=gh-(v/maxPop)*(gh-4)-2;
-            i===0?gc.moveTo(x,y):gc.lineTo(x,y);
-        });
-        gc.stroke();
+    const gc=graphCtx,gw=graphCanvas.width,gh=graphCanvas.height;
+    gc.clearRect(0,0,gw,gh); gc.fillStyle='#0d0010cc'; gc.fillRect(0,0,gw,gh);
+    const spp=Object.keys(popHistory), maxP=Math.max(10,...spp.flatMap(s=>popHistory[s]));
+    const off=100;
+    spp.forEach(sp=>{
+        const hist=popHistory[sp]; if(hist.length<2) return;
+        gc.strokeStyle=SPECIES_DEFS[sp].baseColor+'cc'; gc.lineWidth=1.5; gc.beginPath();
+        hist.forEach((v,i)=>{ const x=off+(i/(POP_MAX-1))*(gw-off), y=gh-(v/maxP)*(gh-6)-3; i===0?gc.moveTo(x,y):gc.lineTo(x,y); }); gc.stroke();
     });
-
-    // Labels
+    const lh=13,lp=4;
+    gc.fillStyle='rgba(8,0,16,0.85)'; gc.fillRect(0,0,100,spp.length*lh+lp*2);
     gc.font='9px Share Tech Mono,monospace';
-    let ly=10;
-    species.forEach(sp=>{
-        const cur=popHistory[sp][popHistory[sp].length-1]||0;
-        gc.fillStyle=SPECIES_DEFS[sp].baseColor;
-        gc.fillText(`${sp[0].toUpperCase()}:${cur}`,4,ly);
-        ly+=10;
-    });
+    spp.forEach((sp,i)=>{ const cur=popHistory[sp][popHistory[sp].length-1]||0; gc.fillStyle=SPECIES_DEFS[sp].baseColor; gc.fillText(`● ${sp} ${cur}`,lp,lp+lh*(i+.85)); });
 }
 
-// =====================
-// TRAIT PANEL
-// =====================
-let traitPanel, showTraits=false;
-
-function createTraitPanel() {
+// ── TRAIT PANEL ───────────────────────────────────────────────────────────
+let traitPanel,showTraits=false;
+function createTraitPanel(){
     traitPanel=document.createElement('div');
-    traitPanel.style.cssText=`
-        position:fixed;bottom:300px;left:10px;z-index:9000;
-        background:#0d0010cc;border:1px solid #cc00ff44;
-        color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:10px;
-        padding:8px;display:none;pointer-events:none;min-width:160px;
-        line-height:1.5;
-    `;
+    traitPanel.style.cssText="position:fixed;bottom:130px;left:10px;z-index:9000;background:#0d0010cc;border:1px solid #cc00ff44;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:10px;padding:8px;display:none;pointer-events:none;min-width:160px;line-height:1.5;";
     document.body.appendChild(traitPanel);
 }
-
-function updateTraitPanel() {
+function updateTraitPanel(){
     if(!showTraits||!traitPanel) return;
-    let html='<div style="color:#cc00ff;margin-bottom:4px">TRAIT EVOLUTION</div>';
+    let h='<div style="color:#cc00ff;margin-bottom:4px">TRAIT EVOLUTION</div>';
     Object.keys(SPECIES_DEFS).forEach(sp=>{
-        const hist=traitHistory[sp];
-        const cur=creatures.filter(c=>c.species===sp);
-        if(cur.length===0) return;
+        const cur=creatures.filter(c=>c.species===sp); if(!cur.length) return;
         const avgSz=(cur.reduce((a,c)=>a+c.size,0)/cur.length).toFixed(1);
         const avgSpd=(cur.reduce((a,c)=>a+c.speed,0)/cur.length).toFixed(2);
-        const minSz=Math.min(...cur.map(c=>c.size)).toFixed(1);
-        const maxSz=Math.max(...cur.map(c=>c.size)).toFixed(1);
-        html+=`<div style="color:${SPECIES_DEFS[sp].baseColor};margin-top:4px">${sp}</div>`;
-        html+=`<div>sz: ${minSz}–${maxSz} avg:${avgSz}</div>`;
-        html+=`<div>spd avg:${avgSpd}</div>`;
+        const minSz=Math.min(...cur.map(c=>c.size)).toFixed(1), maxSz=Math.max(...cur.map(c=>c.size)).toFixed(1);
+        h+=`<div style="color:${SPECIES_DEFS[sp].baseColor};margin-top:4px">${sp}</div><div>sz:${minSz}–${maxSz} avg:${avgSz} spd:${avgSpd}</div>`;
     });
-    traitPanel.innerHTML=html;
-    traitPanel.style.display='block';
+    traitPanel.innerHTML=h; traitPanel.style.display='block';
 }
 
-// =====================
-// GOD MODE PANEL
-// =====================
-let godPanel, showGod=false;
-
-function createGodPanel() {
-    godPanel=document.createElement('div');
-    godPanel.id='eco-god';
-    godPanel.style.cssText=`
-        position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-        background:#0d0010f0;border:1px solid #ff00ff;color:#e8d5f5;
-        font-family:'Share Tech Mono',monospace;font-size:12px;
-        padding:16px 20px;z-index:9999;display:none;min-width:260px;
-        pointer-events:auto;
-    `;
-    godPanel.innerHTML=`
-        <div style="color:#ff00ff;font-size:14px;margin-bottom:12px">⚡ GOD MODE</div>
-        <div style="margin-bottom:8px">
-            <label>Food Multiplier: <span id="god-food-val">1.0</span>x</label><br>
-            <input id="god-food" type="range" min="0" max="5" step="0.1" value="1" style="width:100%;accent-color:#ff00ff">
-        </div>
-        <div style="margin-bottom:8px">
-            <label>Predator Aggression: <span id="god-aggr-val">1.0</span>x</label><br>
-            <input id="god-aggr" type="range" min="0" max="3" step="0.1" value="1" style="width:100%;accent-color:#cc00ff">
-        </div>
-        <div style="margin-bottom:8px">
-            <label>Mutation Rate: <span id="god-mut-val">1.0</span>x</label><br>
-            <input id="god-mut" type="range" min="0" max="5" step="0.1" value="1" style="width:100%;accent-color:#00fff5">
-        </div>
-        <div style="margin-bottom:8px">
-            <label>Day/Night Speed: <span id="god-day-val">1.0</span>x</label><br>
-            <input id="god-day" type="range" min="0.1" max="10" step="0.1" value="1" style="width:100%;accent-color:#ffff00">
-        </div>
-        <div style="color:#9b7db5;font-size:10px;margin-top:8px">press G or click GOD to close</div>
-    `;
+// ── GOD MODE ──────────────────────────────────────────────────────────────
+let godPanel,showGod=false;
+function createGodPanel(){
+    godPanel=document.createElement('div'); godPanel.id='eco-god';
+    godPanel.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0d0010f0;border:1px solid #ff00ff;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:12px;padding:16px 20px;z-index:9999;display:none;min-width:260px;pointer-events:auto;";
+    godPanel.innerHTML=`<div style="color:#ff00ff;font-size:14px;margin-bottom:12px">⚡ GOD MODE</div>
+        ${[['food','Food Mult','#ff00ff',0,5],['aggr','Predator Aggr','#cc00ff',0,3],['mut','Mutation Rate','#00fff5',0,5],['day','Day Speed','#ffff00',.1,10]].map(([id,label,col,mn,mx])=>`<div style="margin-bottom:8px"><label>${label}: <span id="god-${id}-val">1.0</span>x</label><br><input id="god-${id}" type="range" min="${mn}" max="${mx}" step="0.1" value="1" style="width:100%;accent-color:${col}"></div>`).join('')}
+        <div style="color:#9b7db5;font-size:10px;margin-top:8px">press G to close</div>`;
     document.body.appendChild(godPanel);
-
-    let daySpeedMult=1;
-    godPanel.querySelector('#god-food').addEventListener('input',e=>{
-        godMode.foodMult=parseFloat(e.target.value);
-        godPanel.querySelector('#god-food-val').textContent=godMode.foodMult.toFixed(1);
-    });
-    godPanel.querySelector('#god-aggr').addEventListener('input',e=>{
-        godMode.aggrMult=parseFloat(e.target.value);
-        godPanel.querySelector('#god-aggr-val').textContent=godMode.aggrMult.toFixed(1);
-    });
-    godPanel.querySelector('#god-mut').addEventListener('input',e=>{
-        godMode.mutMult=parseFloat(e.target.value);
-        godPanel.querySelector('#god-mut-val').textContent=godMode.mutMult.toFixed(1);
-    });
-    godPanel.querySelector('#god-day').addEventListener('input',e=>{
-        daySpeedMult=parseFloat(e.target.value);
-        godPanel.querySelector('#god-day-val').textContent=daySpeedMult.toFixed(1);
-        // Patch day cycle
-        window._daySpeedMult=daySpeedMult;
-        godPanel.querySelector('#god-day-val').textContent=daySpeedMult.toFixed(1);
-    });
+    const bind=(id,cb)=>{ godPanel.querySelector(`#god-${id}`).addEventListener('input',e=>{ const v=parseFloat(e.target.value); godPanel.querySelector(`#god-${id}-val`).textContent=v.toFixed(1); cb(v); }); };
+    bind('food',v=>godMode.foodMult=v); bind('aggr',v=>godMode.aggrMult=v); bind('mut',v=>godMode.mutMult=v); bind('day',v=>window._daySpeedMult=v);
 }
-
 window._daySpeedMult=1;
 
-// =====================
-// HUD
-// =====================
-function drawHUD() {
+// ── HUD ───────────────────────────────────────────────────────────────────
+function drawHUD(){
     const counts={};
     creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
-    ctx.save(); ctx.shadowBlur=0;
-    ctx.font='11px Share Tech Mono,monospace';
+    ctx.save(); ctx.shadowBlur=0; ctx.font='11px Share Tech Mono,monospace';
     let y=18;
-    Object.entries(counts).forEach(([sp,n])=>{
-        ctx.globalAlpha=0.75; ctx.fillStyle=SPECIES_DEFS[sp].baseColor;
-        ctx.fillText(`${sp}: ${n}`,10,y); y+=14;
-    });
+    Object.entries(counts).forEach(([sp,n])=>{ ctx.globalAlpha=.75; ctx.fillStyle=SPECIES_DEFS[sp].baseColor; ctx.fillText(`${sp}: ${n}`,10,y); y+=14; });
     if(generationCount>0){ ctx.fillStyle='#dd88ff'; ctx.fillText(`max gen: ${generationCount}`,10,y+2); y+=14; }
-    // Day/night indicator
-    const phase = dayT > 0.5 ? 'DAY' : 'NIGHT';
-    ctx.fillStyle = dayT > 0.5 ? '#ffffaa' : '#8888ff';
-    ctx.fillText(phase, 10, y+2);
+    ctx.fillStyle=dayT>.5?'#ffffaa':'#8888ff'; ctx.fillText(dayT>.5?'DAY':'NIGHT',10,y+2);
     ctx.globalAlpha=1; ctx.restore();
 }
 
-// =====================
-// GOD BUTTON
-// =====================
-function addGodButton() {
-    const btn=document.createElement('button');
-    btn.innerText='⚡ GOD MODE';
-    btn.style.cssText=`
-        position:fixed;bottom:122px;left:18px;z-index:99998;
-        background:#0d0010;color:#ffff00;font-family:"Comic Sans MS",monospace;
-        font-size:15px;font-weight:bold;padding:10px 18px;
-        border:2px solid #ffff00;cursor:pointer;
-        text-shadow:0 0 8px #ffff00;box-shadow:0 0 15px rgba(255,255,0,0.4);
-        letter-spacing:1px;
-    `;
-    btn.addEventListener('click',()=>{
-        showGod=!showGod;
-        godPanel.style.display=showGod?'block':'none';
-    });
-    document.body.appendChild(btn);
-
-    // Graph toggle
-    const gBtn=document.createElement('button');
-    gBtn.innerText='📈 GRAPH';
-    gBtn.style.cssText=`
-        position:fixed;bottom:174px;left:18px;z-index:99998;
-        background:#0d0010;color:#00fff5;font-family:"Comic Sans MS",monospace;
-        font-size:15px;font-weight:bold;padding:10px 18px;
-        border:2px solid #00fff5;cursor:pointer;
-        text-shadow:0 0 8px #00fff5;box-shadow:0 0 15px rgba(0,255,245,0.4);
-        letter-spacing:1px;
-    `;
-    gBtn.addEventListener('click',()=>{
-        showGraph=!showGraph;
-        showTraits=!showTraits;
+// ── BUTTONS ───────────────────────────────────────────────────────────────
+function addGodButton(){
+    const mkBtn=(label,col,bottom,onClick)=>{
+        const b=document.createElement('button');
+        b.innerText=label; b.style.cssText=`position:fixed;bottom:${bottom}px;left:18px;z-index:99998;background:#0d0010;color:${col};font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid ${col};cursor:pointer;text-shadow:0 0 8px ${col};box-shadow:0 0 15px ${col}44;letter-spacing:1px;`;
+        b.addEventListener('click',onClick); document.body.appendChild(b); return b;
+    };
+    mkBtn('⚡ GOD MODE','#ffff00',122,()=>{ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; });
+    mkBtn('📈 GRAPH','#00fff5',174,()=>{
+        showGraph=!showGraph; showTraits=showGraph;
         graphCanvas.style.display=showGraph?'block':'none';
-        traitPanel.style.display=showTraits?'block':'none';
+        if(traitPanel) traitPanel.style.display=showTraits?'block':'none';
     });
-    document.body.appendChild(gBtn);
-
-    // Keyboard shortcut
-    document.addEventListener('keydown',e=>{
-        if(e.key==='g'||e.key==='G'){
-            showGod=!showGod;
-            godPanel.style.display=showGod?'block':'none';
-        }
-    });
+    document.addEventListener('keydown',e=>{ if(e.key==='g'||e.key==='G'){ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; } });
 }
 
-// =====================
-// INPUT
-// =====================
-function initInput() {
+// ── INPUT ─────────────────────────────────────────────────────────────────
+function initInput(){
     canvas.style.pointerEvents='auto';
-
-    // Left click/drag = food bloom + scare
-    canvas.addEventListener('mousedown',e=>{
-        if(e.button!==0) return;
-        isDragging=true;
-    });
-    canvas.addEventListener('mousemove',e=>{
-        if(!isDragging) return;
-        const rect=canvas.getBoundingClientRect();
-        dragBloomTimer++;
-        if(dragBloomTimer%8===0) addFoodBloom(e.clientX-rect.left, e.clientY-rect.top);
-    });
+    canvas.addEventListener('mousedown',e=>{ if(e.button===0) isDragging=true; });
+    canvas.addEventListener('mousemove',e=>{ if(!isDragging) return; const r=canvas.getBoundingClientRect(); if(++dragBloomTimer%8===0) addFoodBloom(e.clientX-r.left,e.clientY-r.top); });
     canvas.addEventListener('mouseup',e=>{
-        if(e.button!==0) return;
-        isDragging=false;
-        dragBloomTimer=0;
-        // Single click = scare nearby
-        const rect=canvas.getBoundingClientRect();
-        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-        creatures.forEach(c=>{
-            const dx=c.x-mx,dy=c.y-my,d=Math.sqrt(dx*dx+dy*dy);
-            if(d<c.size*5+35&&d>0){
-                const force=clamp((c.size*2.5+20-d)/(c.size*2.5+20),0.2,1.0);
-                const angle=Math.atan2(dy,dx);
-                const spread=rnd(-0.6,0.6);
-                c.vx=Math.cos(angle+spread)*c.speed*3.5*force;
-                c.vy=Math.sin(angle+spread)*c.speed*3.5*force;
-                c._wanderAngle=angle+spread; c._scared=80;
-            }
-        });
+        if(e.button!==0) return; isDragging=false; dragBloomTimer=0;
+        const r=canvas.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+        creatures.forEach(c=>{ const dx=c.x-mx,dy=c.y-my,d=Math.sqrt(dx*dx+dy*dy); if(d<c.size*5+35&&d>0){ const f=clamp((c.size*2.5+20-d)/(c.size*2.5+20),.2,1), a=Math.atan2(dy,dx), sp=rnd(-.6,.6); c.vx=Math.cos(a+sp)*c.speed*3.5*f; c.vy=Math.sin(a+sp)*c.speed*3.5*f; c._wanderAngle=a+sp; c._scared=80; } });
     });
-
-    // Right click = inspect creature
-    canvas.addEventListener('mousedown',e=>{
-        
+    canvas.addEventListener('contextmenu',e=>{
+        e.preventDefault();
         if(inspectedCreature){ closeInspect(); return; }
-        const rect=canvas.getBoundingClientRect();
-        const mx=e.clientX-rect.left, my=e.clientY-rect.top;
-        let nearest=null,nDist=Infinity;
-        creatures.forEach(c=>{
-            const dx=c.x-mx,dy=c.y-my,d=Math.sqrt(dx*dx+dy*dy);
-            if(d<c.size*4+100&&d<nDist){nDist=d;nearest=c;}
-        });
+        const r=canvas.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+        let nearest=null,nd=Infinity;
+        creatures.forEach(c=>{ const dx=c.x-mx,dy=c.y-my,d=Math.sqrt(dx*dx+dy*dy); if(d<c.size*4+30&&d<nd){nd=d;nearest=c;} });
         if(nearest){ inspectedCreature=nearest; updateInspectPanel(); }
     });
-
-    // Touch drag for food blooms
-    canvas.addEventListener('touchmove',e=>{
-        e.preventDefault();
-        const rect=canvas.getBoundingClientRect();
-        const t=e.touches[0];
-        dragBloomTimer++;
-        if(dragBloomTimer%8===0) addFoodBloom(t.clientX-rect.left,t.clientY-rect.top);
-    },{passive:false});
+    canvas.addEventListener('touchmove',e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect(),t=e.touches[0]; if(++dragBloomTimer%8===0) addFoodBloom(t.clientX-r.left,t.clientY-r.top); },{passive:false});
     canvas.addEventListener('touchend',()=>{ isDragging=false; dragBloomTimer=0; });
 }
 
-// =====================
-// INIT & LOOP
-// =====================
-const stars   = Array.from({length:140}, ()=>new Star());
-const planets = Array.from({length:5},   ()=>new Planet());
-const galaxies= Array.from({length:2},   ()=>new Galaxy());
+// ── INIT & LOOP ───────────────────────────────────────────────────────────
+const stars  =Array.from({length:140},()=>new Star());
+const planets=Array.from({length:5},  ()=>new Planet());
+const galaxies=Array.from({length:2}, ()=>new Galaxy());
+const suns   =Array.from({length:4},  ()=>new Sun());
+const comets =Array.from({length:3},  ()=>new Comet());
+const nebulas=Array.from({length:10}, ()=>new Nebula());
 
-window.addEventListener('load',()=>{
-    resize();
-    initCreatures();
-    createInspectPanel();
-    createGraphPanel();
-    createTraitPanel();
-    createGodPanel();
-    addGodButton();
-    initInput();
-    loop();
-});
+window.addEventListener('load',()=>{ resize(); initCreatures(); createInspectPanel(); createGraphPanel(); createTraitPanel(); createGodPanel(); addGodButton(); initInput(); loop(); });
 
 let frameCount=0;
-const GEN_INTERVAL=3600;
-
-function loop() {
+function loop(){
     requestAnimationFrame(loop);
     if(!W||!H) return;
     frameCount++;
-
     updateDayNight();
-    // Advance day phase by speed multiplier
     for(let i=1;i<Math.floor(window._daySpeedMult||1);i++) updateDayNight();
 
-    ctx.clearRect(0,0,W,H);
-    ctx.shadowBlur=0;
-
+    ctx.clearRect(0,0,W,H); ctx.shadowBlur=0;
     drawDayNight();
-    updateDrawBlooms();
 
+    // Nebulas first (background layer)
+    nebulas.forEach(n=>{n.update();n.draw();});
+    updateDrawBlooms();
     if(frameCount%2===0) stars.forEach(s=>s.update());
     stars.forEach(s=>s.draw());
     galaxies.forEach(g=>{g.update();g.draw();});
+    suns.forEach(s=>{s.update();s.draw();});
     planets.forEach(p=>{p.update();p.draw();});
+    comets.forEach(c=>{c.update();c.draw();});
     ctx.shadowBlur=0;
 
-    creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars); });
+    const newChildren=[];
+    creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
+    newChildren.forEach(ch=>creatures.push(ch));
 
-    if(frameCount%GEN_INTERVAL===0&&frameCount>0){
-        const eligible=creatures.filter(c=>!c.reproduced&&c.energy>40&&creatures.length<280);
-        eligible.forEach(c=>{
-            c.reproduced=true;
-            const child=spawnCreature(c.species,c.x+rnd(-30,30),c.y+rnd(-30,30),c);
-            c._children.push(child.id);
-            creatures.push(child);
-            if(child.generation>generationCount){ generationCount=child.generation; }
-        });
-        creatures.forEach(c=>{ c.energy=Math.min(c.energy+60,200); });
-    }
-
-    Object.keys(SPECIES_DEFS).forEach(k=>{
-        if(!creatures.some(c=>c.species===k)){
-            const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4;
-            for(let i=0;i<n;i++) creatures.push(spawnCreature(k));
-        }
-    });
+    // Extinction rescue
+    Object.keys(SPECIES_DEFS).forEach(k=>{ if(!creatures.some(c=>c.species===k)){ const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4; for(let i=0;i<n;i++) creatures.push(spawnCreature(k)); } });
 
     ctx.shadowBlur=0;
     creatures.forEach(c=>drawCreature(c));
     ctx.shadowBlur=0; ctx.globalAlpha=1;
 
-    // Population history sample
     if(frameCount%120===0){
-        const counts={};
-        creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
-        Object.keys(SPECIES_DEFS).forEach(sp=>{
-            popHistory[sp].push(counts[sp]||0);
-            if(popHistory[sp].length>POP_HISTORY_MAX) popHistory[sp].shift();
-        });
+        const counts={}; creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
+        Object.keys(SPECIES_DEFS).forEach(sp=>{ popHistory[sp].push(counts[sp]||0); if(popHistory[sp].length>POP_MAX) popHistory[sp].shift(); });
     }
-
-    drawHUD();
-    drawGraph();
-    updateTraitPanel();
+    if(frameCount%180===0) updateComplexity();
+    drawHUD(); drawGraph(); updateTraitPanel();
     if(inspectedCreature) updateInspectPanel();
 }
 
