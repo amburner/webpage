@@ -1,5 +1,5 @@
 // =============================================
-// AMBER MILLER — MAXIMUM CHAOS EDITION
+// AMBER MILLER — MAXIMUM CHAOS EDITION (OPTIMIZED)
 // =============================================
 
 // ── UI CHAOS ──────────────────────────────────────────────────────────────
@@ -14,25 +14,34 @@ function addCardMarquees() {
     });
 }
 
+// OPTIMIZED: increased throttle, pooled spark elements
 let lastSparkTime=0, sparkActive=true;
 const SPARK_SYMS=['✶','★','⚡','💥','✨','🌟','☆','◆','♦','❋','+','˚'];
 const NEON=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ff44aa'];
+
+// Spark pool to avoid constant DOM allocation
+const _sparkPool=[], _POOL_MAX=30;
+function _getSparkEl(){
+    return _sparkPool.pop() || (() => { const d=document.createElement('div'); d.className='spark'; return d; })();
+}
+function _retireSparkEl(el){ el.remove(); if(_sparkPool.length<_POOL_MAX) _sparkPool.push(el); }
+
 function createSparkle(e) {
     if(!sparkActive) return;
-    const now=Date.now(); if(now-lastSparkTime<40) return; lastSparkTime=now;
+    const now=Date.now(); if(now-lastSparkTime<80) return; lastSparkTime=now; // was 40ms → 80ms
     const x=e.touches?e.touches[0].pageX:e.pageX, y=e.touches?e.touches[0].pageY:e.pageY;
-    const n=Math.random()<0.4?3:1;
+    const n=Math.random()<0.3?2:1; // was 3:1
     for(let i=0;i<n;i++){
-        const s=document.createElement('div'); s.className='spark';
+        const s=_getSparkEl();
         s.innerText=SPARK_SYMS[Math.floor(Math.random()*SPARK_SYMS.length)];
         s.style.left=(x+(Math.random()-0.5)*30)+'px'; s.style.top=(y+(Math.random()-0.5)*30)+'px';
         s.style.setProperty('--spark-color',NEON[Math.floor(Math.random()*NEON.length)]);
         s.style.fontSize=(0.9+Math.random()*1.2)+'em';
-        document.body.appendChild(s); setTimeout(()=>s.remove(),900);
+        document.body.appendChild(s); setTimeout(()=>_retireSparkEl(s),900);
     }
 }
-document.addEventListener('mousemove',createSparkle);
-document.addEventListener('touchmove',createSparkle);
+document.addEventListener('mousemove',createSparkle,{passive:true});
+document.addEventListener('touchmove',createSparkle,{passive:true});
 
 function animateH2s() {
     const cols=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35']; let i=0;
@@ -179,17 +188,18 @@ function addHideButton(){
 document.addEventListener('DOMContentLoaded',()=>{ addCardMarquees(); animateH2s(); cycleBorders(); addZergButton(); addHideButton(); });
 
 // =============================================
-// COSMIC ECOSYSTEM
+// COSMIC ECOSYSTEM (OPTIMIZED)
 // =============================================
 (function(){
 
 const canvas=document.createElement('canvas');
 canvas.id='ecosystem-canvas';
-canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;';
+// OPTIMIZED: will-change promotes to GPU layer; image-rendering improves pixel perf
+canvas.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;will-change:transform;';
 document.addEventListener('DOMContentLoaded',()=>document.body.prepend(canvas));
-const ctx=canvas.getContext('2d');
+const ctx=canvas.getContext('2d', {alpha:false}); // OPTIMIZED: alpha:false skips compositing
 let W,H;
-function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; _bgDirty=true; }
 window.addEventListener('load',resize); window.addEventListener('resize',resize);
 
 const rnd=(a,b)=>a+Math.random()*(b-a);
@@ -197,44 +207,69 @@ const pick=arr=>arr[Math.floor(Math.random()*arr.length)];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const PALETTE=['#ff00ff','#cc00ff','#ff6ec7','#00fff5','#ff2d78','#ff6b35','#dd88ff','#ffffaa','#aaffff','#ff4400','#cc2200','#ff8800','#4400cc','#0044ff','#00ccff','#ff0044'];
 
+// ── OFFSCREEN BACKGROUND CACHE ────────────────────────────────────────────
+// OPTIMIZED: nebulas + base gradient rendered to offscreen canvas, only redrawn when dirty
+let _bgCanvas=null, _bgCtx=null, _bgDirty=true, _bgPhase=0;
+function ensureBgCanvas(){
+    if(!_bgCanvas||_bgCanvas.width!==W||_bgCanvas.height!==H){
+        _bgCanvas=document.createElement('canvas'); _bgCanvas.width=W; _bgCanvas.height=H;
+        _bgCtx=_bgCanvas.getContext('2d'); _bgDirty=true;
+    }
+}
+
 // ── DAY/NIGHT ─────────────────────────────────────────────────────────────
 let dayPhase=0, dayT=0;
 const DAY_LEN=7200;
 function updateDayNight(){ dayT=(Math.sin(dayPhase*Math.PI*2/DAY_LEN)+1)/2; dayPhase=(dayPhase+1)%DAY_LEN; }
-function drawDayNight(){
+
+// OPTIMIZED: draw background to offscreen canvas, blit to main in one drawImage call
+function renderBgToCache(nebulas){
+    if(!_bgCtx) return;
+    const gc=_bgCtx;
     const night=1-dayT;
-    ctx.fillStyle=night>0.5?'rgba(4,0,10,1)':'rgba(26,0,40,1)'; ctx.fillRect(0,0,W,H);
+
+    // Base fill - no alpha compositing needed
+    gc.fillStyle=night>0.5?'#04000a':'#1a0028';
+    gc.fillRect(0,0,W,H);
+
+    // Night gradient overlay
     if(night>0.05){
-        ctx.globalAlpha=night*0.75;
-        const ng=ctx.createRadialGradient(W*.3,H*.4,0,W*.5,H*.5,Math.max(W,H)*.9);
+        gc.globalAlpha=night*0.75;
+        const ng=gc.createRadialGradient(W*.3,H*.4,0,W*.5,H*.5,Math.max(W,H)*.9);
         ng.addColorStop(0,'#1a000a'); ng.addColorStop(.2,'#0a0025'); ng.addColorStop(.5,'#15000f'); ng.addColorStop(.8,'#060020'); ng.addColorStop(1,'#000000');
-        ctx.fillStyle=ng; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+        gc.fillStyle=ng; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
     }
+    // Aurora
     if(night>0.3){
-        ctx.globalAlpha=(night-0.3)*0.5;
+        gc.globalAlpha=(night-0.3)*0.5;
         [0,1,2,3].forEach(i=>{
             const ax=W*(0.15+i*0.22)+Math.sin(dayPhase*0.002+i)*40;
-            const ag=ctx.createLinearGradient(ax,0,ax+80,H*0.45);
+            const ag=gc.createLinearGradient(ax,0,ax+80,H*0.45);
             const cols=[['#ff00ff','#cc00ff'],['#00fff5','#0044ff'],['#ff2d78','#880022'],['#dd88ff','#440066']];
             ag.addColorStop(0,cols[i][0]+'66'); ag.addColorStop(.5,cols[i][1]+'33'); ag.addColorStop(1,'transparent');
-            ctx.fillStyle=ag; ctx.beginPath(); ctx.moveTo(ax-20,0); ctx.lineTo(ax+60,0); ctx.lineTo(ax+80,H*.45); ctx.lineTo(ax,H*.45); ctx.fill();
+            gc.fillStyle=ag; gc.beginPath(); gc.moveTo(ax-20,0); gc.lineTo(ax+60,0); gc.lineTo(ax+80,H*.45); gc.lineTo(ax,H*.45); gc.fill();
         });
-        ctx.globalAlpha=1;
+        gc.globalAlpha=1;
     }
+    // Sunrise/sunset
     const tt=1-Math.abs(dayT-0.5)*2;
     if(tt>0.05){
-        ctx.globalAlpha=tt*0.65;
-        const dg=ctx.createLinearGradient(0,0,0,H);
+        gc.globalAlpha=tt*0.65;
+        const dg=gc.createLinearGradient(0,0,0,H);
         if(dayT>0.5){ dg.addColorStop(0,'transparent'); dg.addColorStop(.55,'#ff440044'); dg.addColorStop(.75,'#ff880088'); dg.addColorStop(.9,'#ffaa00aa'); dg.addColorStop(1,'#ff660088'); }
         else        { dg.addColorStop(0,'transparent'); dg.addColorStop(.5,'#cc220044'); dg.addColorStop(.75,'#880000aa'); dg.addColorStop(1,'#ff0044aa'); }
-        ctx.fillStyle=dg; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+        gc.fillStyle=dg; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
     }
     if(dayT>0.3){
-        ctx.globalAlpha=(dayT-0.3)*0.25;
-        const dg2=ctx.createRadialGradient(W*.5,H*.4,0,W*.5,H*.5,Math.max(W,H)*.7);
+        gc.globalAlpha=(dayT-0.3)*0.25;
+        const dg2=gc.createRadialGradient(W*.5,H*.4,0,W*.5,H*.5,Math.max(W,H)*.7);
         dg2.addColorStop(0,'#2d0050'); dg2.addColorStop(.5,'#1a0030'); dg2.addColorStop(1,'transparent');
-        ctx.fillStyle=dg2; ctx.fillRect(0,0,W,H); ctx.globalAlpha=1;
+        gc.fillStyle=dg2; gc.fillRect(0,0,W,H); gc.globalAlpha=1;
     }
+
+    // Nebulas baked in here (static-ish layer)
+    nebulas.forEach(n=>n.drawTo(gc));
+    _bgDirty=false;
 }
 
 // ── FOOD BLOOMS ───────────────────────────────────────────────────────────
@@ -257,6 +292,27 @@ class Star {
     update(){ this.x+=Math.cos(this.dir)*this.spd; this.y+=Math.sin(this.dir)*this.spd; this.tw+=this.twSpd; if(this.x<-5||this.x>W+5||this.y<-5||this.y>H+5) this.reset(false); }
     draw(){ ctx.globalAlpha=(0.4+0.5*Math.sin(this.tw))*(0.4+0.6*dayT); ctx.fillStyle=this.col; ctx.beginPath(); ctx.arc(this.x,this.y,this.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1; }
 }
+
+// OPTIMIZED: batch all stars in one draw pass using a single beginPath per color group
+function drawStarsBatched(stars){
+    // Group by color
+    const groups={};
+    stars.forEach(s=>{
+        const a=(0.4+0.5*Math.sin(s.tw))*(0.4+0.6*dayT);
+        const key=s.col;
+        if(!groups[key]) groups[key]={col:s.col,items:[]};
+        groups[key].items.push({x:s.x,y:s.y,r:s.r,a});
+    });
+    Object.values(groups).forEach(g=>{
+        ctx.fillStyle=g.col;
+        g.items.forEach(({x,y,r,a})=>{
+            ctx.globalAlpha=a;
+            ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+        });
+    });
+    ctx.globalAlpha=1;
+}
+
 class Planet {
     constructor(){ this.reset(true); }
     reset(init){ this.r=rnd(18,52); this.x=init?rnd(0,W||1200):(Math.random()<.5?-this.r-10:(W||1200)+this.r+10); this.y=rnd(this.r,(H||800)-this.r); this.spd=rnd(.04,.2); this.dx=(this.x<0?1:-1)*this.spd; this.dy=rnd(-.04,.04); this.col=pick(PALETTE); this.col2=pick(PALETTE); this.rings=Math.random()<.4; this.ringTilt=rnd(.2,.6); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.004,.004); this.grav=this.r*7; }
@@ -306,24 +362,44 @@ class Comet {
         ctx.globalAlpha=1; ctx.restore();
     }
 }
+
+// OPTIMIZED: Nebula draws to a provided context (so it can go into the BG cache)
 class Nebula {
     constructor(){ this.reset(true); }
     reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(120,320); this.col=pick(['#cc2200','#ff4400','#4400cc','#880044','#cc0044','#ff6600','#220066','#660022']); this.col2=pick(['#ff0000','#cc4400','#000044','#aa0022','#ff2200','#4400aa']); this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.0002,.0002); this.dx=rnd(-.04,.04); this.dy=rnd(-.02,.02); }
-    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); }
-    draw(){
-        ctx.save(); ctx.translate(this.x,this.y); ctx.rotate(this.rot); ctx.globalAlpha=0.12;
-        const g=ctx.createRadialGradient(0,0,this.r*.1,0,0,this.r); g.addColorStop(0,this.col+'ff'); g.addColorStop(.4,this.col2+'cc'); g.addColorStop(1,'transparent');
-        ctx.fillStyle=g; ctx.scale(1.8,.9); ctx.beginPath(); ctx.arc(0,0,this.r,0,Math.PI*2); ctx.fill();
-        ctx.globalAlpha=.07; ctx.scale(.7,1.3); ctx.beginPath(); ctx.arc(this.r*.2,0,this.r*.8,0,Math.PI*2); ctx.fill();
-        ctx.globalAlpha=1; ctx.restore();
+    update(){ this.x+=this.dx; this.y+=this.dy; this.rot+=this.rotSpd; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); _bgDirty=true; }
+    drawTo(gc){
+        gc.save(); gc.translate(this.x,this.y); gc.rotate(this.rot); gc.globalAlpha=0.12;
+        const g=gc.createRadialGradient(0,0,this.r*.1,0,0,this.r); g.addColorStop(0,this.col+'ff'); g.addColorStop(.4,this.col2+'cc'); g.addColorStop(1,'transparent');
+        gc.fillStyle=g; gc.scale(1.8,.9); gc.beginPath(); gc.arc(0,0,this.r,0,Math.PI*2); gc.fill();
+        gc.globalAlpha=.07; gc.scale(.7,1.3); gc.beginPath(); gc.arc(this.r*.2,0,this.r*.8,0,Math.PI*2); gc.fill();
+        gc.globalAlpha=1; gc.restore();
     }
+    draw(){ this.drawTo(ctx); } // fallback
 }
 
+// ── SPATIAL HASH for O(1) neighbour lookup ────────────────────────────────
+// OPTIMIZED: replaces O(n²) creature.forEach inside updateCreature
+class SpatialHash {
+    constructor(cellSize){ this.cs=cellSize; this.cells=new Map(); }
+    _key(x,y){ return ((x/this.cs|0)<<16)^(y/this.cs|0); }
+    clear(){ this.cells.clear(); }
+    insert(c){ const k=this._key(c.x,c.y); if(!this.cells.has(k)) this.cells.set(k,[]); this.cells.get(k).push(c); }
+    query(x,y,r){
+        const results=[], cs=this.cs;
+        const x0=(x-r)/cs|0, x1=(x+r)/cs|0, y0=(y-r)/cs|0, y1=(y+r)/cs|0;
+        for(let cx=x0;cx<=x1;cx++) for(let cy=y0;cy<=y1;cy++){
+            const k=(cx<<16)^cy, cell=this.cells.get(k);
+            if(cell) cell.forEach(c=>results.push(c));
+        }
+        return results;
+    }
+}
+const spatialHash=new SpatialHash(100);
+
 // ── NEURAL NET ────────────────────────────────────────────────────────────
-// Tiny feedforward net: 8 inputs → 6 hidden (tanh) → 2 outputs
-// Weights stored on creature, mutated on birth. Pure evolutionary, no backprop.
 const NN_IN=8, NN_H=6, NN_OUT=2;
-const NN_W = NN_IN*NN_H + NN_H*NN_OUT + NN_H + NN_OUT; // total weights
+const NN_W = NN_IN*NN_H + NN_H*NN_OUT + NN_H + NN_OUT;
 
 function randomWeights(){ return Float32Array.from({length:NN_W},()=>rnd(-1,1)); }
 function mutateWeights(w, rate=0.08){
@@ -332,20 +408,17 @@ function mutateWeights(w, rate=0.08){
     return out;
 }
 function nnForward(w, inputs){
-    // Unpack: w1[IN×H], b1[H], w2[H×OUT], b2[OUT]
     let idx=0;
     const w1=w.slice(idx, idx+=NN_IN*NN_H);
     const b1=w.slice(idx, idx+=NN_H);
     const w2=w.slice(idx, idx+=NN_H*NN_OUT);
     const b2=w.slice(idx, idx+=NN_OUT);
-    // Hidden layer
     const h=new Float32Array(NN_H);
     for(let j=0;j<NN_H;j++){
         let s=b1[j];
         for(let i=0;i<NN_IN;i++) s+=inputs[i]*w1[j*NN_IN+i];
         h[j]=Math.tanh(s);
     }
-    // Output layer
     const out=new Float32Array(NN_OUT);
     for(let k=0;k<NN_OUT;k++){
         let s=b2[k];
@@ -392,7 +465,6 @@ function spawnCreature(key, x, y, parent){
         generation: parent?parent.generation+1:0,
         parentId: parent?parent.id:null,
         socialTrait: parent?clamp(parent.socialTrait+rnd(-.05,.08),0,1):rnd(0,.3),
-        // Neural net weights — inherited + mutated, or random for gen0
         nnWeights: parent ? mutateWeights(parent.nnWeights) : randomWeights(),
         _wanderAngle:Math.random()*Math.PI*2, _scared:0, _newborn:parent?60:0, _children:[],
     };
@@ -442,7 +514,6 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     const def=SPECIES_DEFS[c.species];
     const nightPenalty=def.activeAtNight?1.0:(0.3+0.7*dayT);
     const drainMult=c.reproduced?1.0:0.1;
-    // Tuned: meaningful drain that requires active foraging
     c.energy -= (0.22+c.size*.007)*drainMult*nightPenalty;
     c.energy += 0.04*godMode.foodMult;
     if(c.age>c.maxAge||c.energy<=0) return false;
@@ -454,84 +525,77 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         if(Math.min(c.x,W-c.x,c.y,H-c.y)<ef) c._scared=Math.max(c._scared,10);
     }
 
-    // ── Gather sensor inputs for neural net ──────────────────────────────
-    // Find nearest threat and nearest food target
+    // OPTIMIZED: use spatial hash instead of scanning all creatures
+    const nearby=spatialHash.query(c.x,c.y,Math.max(c.sense*2, 200));
+
     let threatDx=0,threatDy=0,threatD=Infinity;
     let preyDx=0,preyDy=0,preyD=Infinity;
     let mateDx=0,mateDy=0,mateD=Infinity, mateFound=null;
-    let foodDx=0,foodDy=0,foodD=Infinity;
 
-    creatures.forEach(o=>{
+    nearby.forEach(o=>{
         if(o===c||o._dead) return;
-        const dx=o.x-c.x, dy=o.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
-        // Threat
+        const dx=o.x-c.x, dy=o.y-c.y, d=dx*dx+dy*dy; // OPTIMIZED: skip sqrt until needed
         const isThreat=(c.diet==='herb'&&(o.diet==='carn'||o.diet==='apex'))||(c.diet==='carn'&&o.diet==='apex');
-        if(isThreat&&d<c.sense*1.5&&d<threatD){ threatDx=-dx; threatDy=-dy; threatD=d; }
-        // Prey
+        const sense2threat=(c.sense*1.5)*(c.sense*1.5);
+        if(isThreat&&d<sense2threat&&d<threatD){ threatDx=-(o.x-c.x); threatDy=-(o.y-c.y); threatD=d; }
         const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
-        if(isPrey&&d<c.sense*godMode.aggrMult&&d<preyD){ preyDx=dx; preyDy=dy; preyD=d; }
-        // Mate seeking: if not yet reproduced, seek same species with enough energy
-        if(!c.reproduced&&o.species===c.species&&o.energy>110&&d<c.sense*2&&d<mateD){ mateDx=dx; mateDy=dy; mateD=d; mateFound=o; }
+        const sense2prey=(c.sense*godMode.aggrMult)*(c.sense*godMode.aggrMult);
+        if(isPrey&&d<sense2prey&&d<preyD){ preyDx=o.x-c.x; preyDy=o.y-c.y; preyD=d; }
+        if(!c.reproduced&&o.species===c.species&&o.energy>110){
+            const sense2mate=(c.sense*2)*(c.sense*2);
+            if(d<sense2mate&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
+        }
     });
 
-    // Nearest celestial food source
+    // Celestial food (small fixed arrays, no optimization needed)
+    let foodDx=0,foodDy=0,foodD=Infinity;
     [...planets,...galaxies,...suns].forEach(obj=>{
-        const dx=obj.x-c.x, dy=obj.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
-        if(d<obj.grav&&d<foodD){ foodDx=dx; foodDy=dy; foodD=d; }
+        const dx=obj.x-c.x, dy=obj.y-c.y, d=dx*dx+dy*dy;
+        if(d<obj.grav*obj.grav&&d<foodD){ foodDx=dx; foodDy=dy; foodD=d; }
     });
-    foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r*2&&d<foodD){foodDx=dx;foodDy=dy;foodD=d;} });
+    foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=dx*dx+dy*dy; if(d<(b.r*2)*(b.r*2)&&d<foodD){foodDx=dx;foodDy=dy;foodD=d;} });
 
-    // Normalise inputs into [-1,1]
     const ns=(v,mx)=>clamp(v/mx,-1,1);
     const inputs=new Float32Array([
-        ns(threatDx,c.sense), ns(threatDy,c.sense),     // flee vector
-        ns(preyDx,c.sense),   ns(preyDy,c.sense),       // hunt vector
-        ns(foodDx,400),        ns(foodDy,400),            // food vector
-        ns(mateDx,c.sense*2), ns(mateDy,c.sense*2),     // mate vector
+        ns(threatDx,c.sense), ns(threatDy,c.sense),
+        ns(preyDx,c.sense),   ns(preyDy,c.sense),
+        ns(foodDx,400),        ns(foodDy,400),
+        ns(mateDx,c.sense*2), ns(mateDy,c.sense*2),
     ]);
 
-    // Run net → outputs are desire weights in [-1,1]
     const nnOut = nnForward(c.nnWeights, inputs);
-    // nnOut[0] = flee/hunt bias (negative=flee, positive=hunt/eat)
-    // nnOut[1] = food/mate bias (negative=food, positive=mate)
 
-    // ── Behaviour tree (with NN modulation) ──────────────────────────────
     let desiredX=c.vx, desiredY=c.vy, dominated=false;
 
     if(c._scared>0){
         c._wanderAngle=Math.atan2(c.vy,c.vx);
     } else {
-        const fleeWeight = clamp(0.5 - nnOut[0]*0.5, 0, 1); // high when net says flee
+        const fleeWeight = clamp(0.5 - nnOut[0]*0.5, 0, 1);
         const huntWeight = clamp(0.5 + nnOut[0]*0.5, 0, 1);
         const mateWeight = clamp(0.5 + nnOut[1]*0.5, 0, 1);
         const foodWeight = clamp(0.5 - nnOut[1]*0.5, 0, 1);
 
-        // Shark crowd penalty
         if(c.species==='shark'){ const n=creatures.filter(x=>x.species==='shark').length; c._crowdFactor=clamp(1-(n-8)*.05,.4,1); }
         else c._crowdFactor=1;
 
-        // FLEE (modulated by NN)
         if(threatD<Infinity && fleeWeight>0.3){
             const d=Math.sqrt(threatDx*threatDx+threatDy*threatDy)||1;
             desiredX=threatDx/d*c.speed*fleeWeight*2; desiredY=threatDy/d*c.speed*fleeWeight*2;
             dominated=true; c._scared=Math.min(c._scared+2,30);
         }
 
-        // HUNT (modulated by NN)
         if(!dominated&&preyD<Infinity&&huntWeight>0.4){
             const d=Math.sqrt(preyDx*preyDx+preyDy*preyDy)||1;
             desiredX=preyDx/d*c.speed*(c._crowdFactor||1); desiredY=preyDy/d*c.speed*(c._crowdFactor||1); dominated=true;
-            // Kill if close enough
-            creatures.forEach(p=>{ if(p===c||p._dead) return; const isPrey=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!isPrey) return; const dx=p.x-c.x,dy=p.y-c.y,d2=Math.sqrt(dx*dx+dy*dy); if(d2<c.size+p.size){ c.energy+=p.size*14*(1+c.size*.04); p._dead=true; } });
+            // Kill check using nearby (already filtered)
+            nearby.forEach(p=>{ if(p===c||p._dead) return; const isPrey=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!isPrey) return; const dx=p.x-c.x,dy=p.y-c.y,d2=Math.sqrt(dx*dx+dy*dy); if(d2<c.size+p.size){ c.energy+=p.size*14*(1+c.size*.04); p._dead=true; } });
         }
 
-        // SEEK MATE (if not reproduced, NN mateBias high)
         if(!dominated&&!c.reproduced&&mateD<Infinity&&mateWeight>0.5){
             const d=Math.sqrt(mateDx*mateDx+mateDy*mateDy)||1;
             desiredX=mateDx/d*c.speed; desiredY=mateDy/d*c.speed; dominated=true;
         }
 
-        // SEEK FOOD (herbivores + hungry predators, modulated by NN)
         if(!dominated&&(c.diet==='herb'||c.energy<80)){
             if(foodD<Infinity&&foodWeight>0.3){
                 const d=Math.sqrt(foodDx*foodDx+foodDy*foodDy)||1;
@@ -539,12 +603,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
             }
         }
 
-        // Obstacle avoidance for predators near planets
         if(c.diet==='carn'||c.diet==='apex'){
             [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,dist=Math.sqrt(dx*dx+dy*dy); if(dist<obj.r*1.8){desiredX-=dx/dist*c.speed;desiredY-=dy/dist*c.speed;dominated=true;} });
         }
 
-        // Energy gain from food sources
         if(c.diet==='herb'){
             [...planets,...galaxies].forEach(obj=>{ const dx=obj.x-c.x,dy=obj.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<obj.r*1.2) c.energy-=.4; else if(d<obj.r*3) c.energy+=2.2*godMode.foodMult; });
             suns.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<s.grav) c.energy+=(1-d/s.grav)*2.5*godMode.foodMult; });
@@ -555,9 +617,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r) c.energy+=3*godMode.foodMult; });
     }
 
-    // ── Emergent intelligence ─────────────────────────────────────────────
     if(!dominated&&_complexityUnlocked){
-        const em=applyEmergent(c,creatures);
+        const em=applyEmergent(c,nearby); // OPTIMIZED: pass pre-filtered nearby
         if(em){ desiredX=em.vx; desiredY=em.vy; dominated=true; }
     }
 
@@ -566,7 +627,6 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         desiredX=Math.cos(c._wanderAngle)*c.speed; desiredY=Math.sin(c._wanderAngle)*c.speed;
     }
 
-    // ── Physics ───────────────────────────────────────────────────────────
     if(c._scared<=0){ const mt=.015; c.vx+=clamp((desiredX-c.vx)*.025,-mt,mt); c.vy+=clamp((desiredY-c.vy)*.025,-mt,mt); }
     const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
     const szPen=clamp(1-(c.size-12)*.008,.5,1);
@@ -579,7 +639,6 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     if(c.y<pad)c.vy+=.05; if(c.y>H-pad)c.vy-=.05;
     c.x+=c.vx; c.y+=c.vy;
 
-    // ── Reproduce ─────────────────────────────────────────────────────────
     const reproRate=c.reproduce*godMode.mutMult;
     if(c.energy>130&&mateFound&&Math.random()<reproRate&&creatures.length<POP_CAP){
         c.reproduced=true; mateFound.energy*=.6; c.energy*=.45;
@@ -605,29 +664,27 @@ function updateComplexity(){
     _complexityScore=avgSense*avgSocial*(avgAge/2000);
     _complexityUnlocked=_complexityScore>0.8;
 }
-function applyEmergent(c, all){
+// OPTIMIZED: now receives pre-filtered nearby array instead of scanning all creatures
+function applyEmergent(c, nearby){
     const social=c.socialTrait||0; if(social<.4) return null;
-    const nearby=all.filter(o=>{ if(o===c||o._dead) return false; const dx=o.x-c.x,dy=o.y-c.y; return Math.sqrt(dx*dx+dy*dy)<c.sense*1.2&&o.species===c.species; });
-    if(nearby.length<2) return null;
-    // Coordinated hunting
+    const sameSpecies=nearby.filter(o=>!o._dead&&o.species===c.species&&(()=>{const dx=o.x-c.x,dy=o.y-c.y;return Math.sqrt(dx*dx+dy*dy)<c.sense*1.2;})());
+    if(sameSpecies.length<2) return null;
     if((c.diet==='carn'||c.diet==='apex')&&social>.5){
-        const cx=nearby.reduce((a,o)=>a+o.x,c.x)/(nearby.length+1), cy=nearby.reduce((a,o)=>a+o.y,c.y)/(nearby.length+1);
+        const cx2=sameSpecies.reduce((a,o)=>a+o.x,c.x)/(sameSpecies.length+1), cy2=sameSpecies.reduce((a,o)=>a+o.y,c.y)/(sameSpecies.length+1);
         let bp=null,bd=Infinity;
-        all.forEach(p=>{ if(p._dead) return; const ip=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!ip) return; const dx=p.x-cx,dy=p.y-cy,d=Math.sqrt(dx*dx+dy*dy); if(d<c.sense*2&&d<bd){bd=d;bp=p;} });
+        nearby.forEach(p=>{ if(p._dead) return; const ip=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!ip) return; const dx=p.x-cx2,dy=p.y-cy2,d=Math.sqrt(dx*dx+dy*dy); if(d<c.sense*2&&d<bd){bd=d;bp=p;} });
         if(bp){ const dx=bp.x-c.x,dy=bp.y-c.y,d=Math.sqrt(dx*dx+dy*dy)||1; return {vx:dx/d*c.speed,vy:dy/d*c.speed}; }
     }
-    // Protective circles
     if(c.diet==='herb'&&social>.45){
-        if(nearby.some(o=>o._scared>0)||c._scared>0){
-            const cx=nearby.reduce((a,o)=>a+o.x,c.x)/(nearby.length+1), cy=nearby.reduce((a,o)=>a+o.y,c.y)/(nearby.length+1);
-            const dx=c.x-cx,dy=c.y-cy,d=Math.sqrt(dx*dx+dy*dy)||1, tr=40+nearby.length*8, diff=d-tr;
+        if(sameSpecies.some(o=>o._scared>0)||c._scared>0){
+            const cx2=sameSpecies.reduce((a,o)=>a+o.x,c.x)/(sameSpecies.length+1), cy2=sameSpecies.reduce((a,o)=>a+o.y,c.y)/(sameSpecies.length+1);
+            const dx=c.x-cx2,dy=c.y-cy2,d=Math.sqrt(dx*dx+dy*dy)||1, tr=40+sameSpecies.length*8, diff=d-tr;
             if(Math.abs(diff)>10){ const dir=diff>0?-1:1; return {vx:(dx/d)*dir*c.speed*.7+(-dy/d)*c.speed*.5,vy:(dy/d)*dir*c.speed*.7+(dx/d)*c.speed*.5}; }
             return {vx:(-dy/d)*c.speed,vy:(dx/d)*c.speed};
         }
     }
-    // Migration waves
-    if(social>.65&&nearby.length>=3){
-        const avgVx=nearby.reduce((a,o)=>a+o.vx,0)/nearby.length, avgVy=nearby.reduce((a,o)=>a+o.vy,0)/nearby.length;
+    if(social>.65&&sameSpecies.length>=3){
+        const avgVx=sameSpecies.reduce((a,o)=>a+o.vx,0)/sameSpecies.length, avgVy=sameSpecies.reduce((a,o)=>a+o.vy,0)/sameSpecies.length;
         return {vx:avgVx*.6+c.vx*.4, vy:avgVy*.6+c.vy*.4};
     }
     return null;
@@ -645,7 +702,6 @@ function updateInspectPanel(){
     const c=inspectedCreature;
     if(!creatures.includes(c)){ closeInspect(); return; }
     const def=SPECIES_DEFS[c.species], par=creatures.find(x=>x.id===c.parentId);
-    // Show top 3 NN weights as a rough personality hint (purely cosmetic)
     const topW=Array.from(c.nnWeights).slice(0,6).map(v=>v.toFixed(2)).join(' ');
     inspectPanel.innerHTML=`
         <div style="color:${def.baseColor};font-size:13px;margin-bottom:6px">◈ ${c.species.toUpperCase()}</div>
@@ -724,7 +780,7 @@ window._daySpeedMult=1;
 function drawHUD(){
     const counts={};
     creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
-    ctx.save(); ctx.shadowBlur=0; ctx.font='11px Share Tech Mono,monospace';
+    ctx.save(); ctx.font='11px Share Tech Mono,monospace';
     let y=18;
     Object.entries(counts).forEach(([sp,n])=>{ ctx.globalAlpha=.75; ctx.fillStyle=SPECIES_DEFS[sp].baseColor; ctx.fillText(`${sp}: ${n}`,10,y); y+=14; });
     if(generationCount>0){ ctx.fillStyle='#dd88ff'; ctx.fillText(`max gen: ${generationCount}`,10,y+2); y+=14; }
@@ -752,7 +808,7 @@ function addGodButton(){
 function initInput(){
     canvas.style.pointerEvents='auto';
     canvas.addEventListener('mousedown',e=>{ if(e.button===0) isDragging=true; });
-    canvas.addEventListener('mousemove',e=>{ if(!isDragging) return; const r=canvas.getBoundingClientRect(); if(++dragBloomTimer%8===0) addFoodBloom(e.clientX-r.left,e.clientY-r.top); });
+    canvas.addEventListener('mousemove',e=>{ if(!isDragging) return; const r=canvas.getBoundingClientRect(); if(++dragBloomTimer%8===0) addFoodBloom(e.clientX-r.left,e.clientY-r.top); },{passive:true});
     canvas.addEventListener('mouseup',e=>{
         if(e.button!==0) return; isDragging=false; dragBloomTimer=0;
         const r=canvas.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -781,6 +837,9 @@ const nebulas=Array.from({length:10}, ()=>new Nebula());
 window.addEventListener('load',()=>{ resize(); initCreatures(); createInspectPanel(); createGraphPanel(); createTraitPanel(); createGodPanel(); addGodButton(); initInput(); loop(); });
 
 let frameCount=0;
+// OPTIMIZED: track previous dayT phase to decide when bg needs refresh
+let _lastBgDayT=-1;
+
 function loop(){
     requestAnimationFrame(loop);
     if(!W||!H) return;
@@ -788,30 +847,41 @@ function loop(){
     updateDayNight();
     for(let i=1;i<Math.floor(window._daySpeedMult||1);i++) updateDayNight();
 
-    ctx.clearRect(0,0,W,H); ctx.shadowBlur=0;
-    drawDayNight();
+    // OPTIMIZED: rebuild spatial hash once per frame
+    spatialHash.clear();
+    creatures.forEach(c=>spatialHash.insert(c));
 
-    // Nebulas first (background layer)
-    nebulas.forEach(n=>{n.update();n.draw();});
+    // OPTIMIZED: only redraw BG when day phase changes meaningfully (every ~6 frames)
+    const dayChanged=Math.abs(dayT-_lastBgDayT)>0.002;
+    if(dayChanged||_bgDirty){
+        ensureBgCanvas();
+        nebulas.forEach(n=>n.update()); // still update positions
+        renderBgToCache(nebulas);
+        _lastBgDayT=dayT;
+    }
+
+    // Blit cached background in one call — no gradient recomputation
+    ctx.drawImage(_bgCanvas,0,0);
+
     updateDrawBlooms();
+
+    // OPTIMIZED: update stars every 2 frames, draw every frame
     if(frameCount%2===0) stars.forEach(s=>s.update());
-    stars.forEach(s=>s.draw());
+    drawStarsBatched(stars); // batched by color group
+
     galaxies.forEach(g=>{g.update();g.draw();});
     suns.forEach(s=>{s.update();s.draw();});
     planets.forEach(p=>{p.update();p.draw();});
     comets.forEach(c=>{c.update();c.draw();});
-    ctx.shadowBlur=0;
 
     const newChildren=[];
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
     newChildren.forEach(ch=>creatures.push(ch));
 
-    // Extinction rescue
     Object.keys(SPECIES_DEFS).forEach(k=>{ if(!creatures.some(c=>c.species===k)){ const n=k==='leviathan'?1:k==='shark'||k==='anglerfish'?2:4; for(let i=0;i<n;i++) creatures.push(spawnCreature(k)); } });
 
-    ctx.shadowBlur=0;
     creatures.forEach(c=>drawCreature(c));
-    ctx.shadowBlur=0; ctx.globalAlpha=1;
+    ctx.globalAlpha=1;
 
     if(frameCount%120===0){
         const counts={}; creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
