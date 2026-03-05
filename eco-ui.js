@@ -34,7 +34,7 @@ function closeInspect(){ inspectedCreature=null; if(inspectPanel) inspectPanel.s
 // ── GRAPH ─────────────────────────────────────────────────────────────────
 let graphCanvas,graphCtx,showGraph=false;
 function createGraphPanel(){
-    graphCanvas=document.createElement('canvas'); graphCanvas.width=360; graphCanvas.height=180;
+    graphCanvas=document.createElement('canvas'); graphCanvas.width=screen.width/3; graphCanvas.height=screen.width/6;
     graphCanvas.style.cssText='position:fixed;top:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
     document.body.appendChild(graphCanvas); graphCtx=graphCanvas.getContext('2d');
 }

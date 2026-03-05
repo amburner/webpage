@@ -2,9 +2,15 @@
 // COSMIC ECOSYSTEM — CANVAS, BACKGROUND, CELESTIAL OBJECTS
 // Load order: eco-canvas.js → eco-creatures.js → eco-ui.js → eco-main.js
 // =============================================
+// ── IS_MOBILE & SCALE FACTOR ─────────────────────────────────────────────
 // IS_MOBILE declared first so all files can use it at parse time
 const IS_MOBILE=/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)||window.innerWidth<768;
-
+// S: linear scale relative to 1920×1080 baseline (diagonal ratio).
+// Sizes/radii multiply by S; speeds multiply by S^0.5 so large screens feel
+// proportionally faster without being chaotic.
+function getScale(){ const d=Math.sqrt(window.innerWidth**2+window.innerHeight**2); return d/Math.sqrt(1920**2+1080**2); }
+let S=getScale(), Ss=Math.sqrt(S);
+// Recompute on resize so newly spawned objects use correct scale
 
 const canvas=document.createElement('canvas');
 canvas.id='ecosystem-canvas';
@@ -31,6 +37,7 @@ function resize(){
         if(typeof creatures!=='undefined') creatures.forEach(c=>{ c.x*=sx; c.y*=sy; });
     }
     _prevW=newW; _prevH=newH;
+    S=getScale(); Ss=Math.sqrt(S);
 }
 window.addEventListener('load',resize); window.addEventListener('resize',resize);
 
@@ -91,7 +98,7 @@ function renderBgToCache(nebulas){
 
 // ── FOOD BLOOMS ───────────────────────────────────────────────────────────
 let foodBlooms=[], isDragging=false, dragBloomTimer=0;
-function addFoodBloom(x,y){ foodBlooms.push({x,y,r:60,life:300,maxLife:300}); }
+function addFoodBloom(x,y){ foodBlooms.push({x,y,r:60*S,life:300,maxLife:300}); }
 function updateDrawBlooms(){
     foodBlooms=foodBlooms.filter(b=>b.life>0);
     foodBlooms.forEach(b=>{
@@ -104,7 +111,7 @@ function updateDrawBlooms(){
 // ── CELESTIAL OBJECTS ─────────────────────────────────────────────────────
 class Star {
     constructor(){ this.reset(true); }
-    reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(.3,1.8); this.spd=rnd(.02,.15); this.dir=rnd(0,Math.PI*2); this.tw=rnd(0,Math.PI*2); this.twSpd=rnd(.02,.05); this.col=pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']); }
+    reset(init){ this.x=rnd(0,W||1200); this.y=rnd(0,H||800); this.r=rnd(.3,1.8)*S; this.spd=rnd(.02,.15)*Ss; this.dir=rnd(0,Math.PI*2); this.tw=rnd(0,Math.PI*2); this.twSpd=rnd(.02,.05); this.col=pick(['#ffffff','#ffe8ff','#e8e8ff','#ffd0ff','#d0ffff']); }
     update(){
         this.dir += rnd(-.015, .015);
         this.x += Math.cos(this.dir) * this.spd;
@@ -139,12 +146,12 @@ function drawStarsBatched(stars){
 class Planet {
     constructor(){ this.reset(true); }
     reset(init){
-        this.r = rnd(18, 52);
+        this.r = rnd(18, 52)*S;
         if(init){
             this.x = rnd(0, W || 1200);
             this.y = rnd(this.r, (H || 800) - this.r);
-            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.04, .2);
-            this.dy = rnd(-.06, .06);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.04, .2)*Ss;
+            this.dy = rnd(-.06, .06)*Ss;
         } else {
             const edge = Math.floor(Math.random() * 4);
             if(edge === 0){      this.x = -this.r - 10;    this.y = rnd(0, H); }
@@ -154,7 +161,7 @@ class Planet {
             const targetX = W * rnd(0.25, 0.75);
             const targetY = H * rnd(0.25, 0.75);
             const angle = Math.atan2(targetY - this.y, targetX - this.x);
-            const spd = rnd(.04, .2);
+            const spd = rnd(.04, .2)*Ss;
             this.dx = Math.cos(angle) * spd;
             this.dy = Math.sin(angle) * spd;
         }
@@ -162,7 +169,7 @@ class Planet {
         this.col = pick(PALETTE); this.col2 = pick(PALETTE);
         this.rings = Math.random() < .4; this.ringTilt = rnd(.2, .6);
         this.rot = rnd(0, Math.PI * 2); this.rotSpd = rnd(-.004, .004);
-        this.grav = this.r * 7;
+        this.grav = this.r * 7; // r already scaled
     }
     update(){
         this.x += this.dx;
@@ -171,8 +178,8 @@ class Planet {
         this.dx += rnd(-.003, .003);
         this.dy += rnd(-.003, .003);
         const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-        if(spd > 0.25){ this.dx = this.dx / spd * 0.25; this.dy = this.dy / spd * 0.25; }
-        if(spd < 0.04){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(spd > 0.25*Ss){ this.dx = this.dx / spd * 0.25*Ss; this.dy = this.dy / spd * 0.25*Ss; }
+        if(spd < 0.04*Ss){ this.dx *= 1.05; this.dy *= 1.05; }
         if(this.x < -this.r - 60 || this.x > W + this.r + 60 ||
         this.y < -this.r - 60 || this.y > H + this.r + 60) this.reset(false);
     }
@@ -186,12 +193,12 @@ class Planet {
 class Galaxy {
     constructor(){ this.reset(true); }
     reset(init){
-        this.r = rnd(40, 100);
+        this.r = rnd(40, 100)*S;
         if(init){
             this.x = rnd(0, W || 1200);
             this.y = rnd(this.r, (H || 800) - this.r);
-            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.01, .07);
-            this.dy = rnd(-.04, .04);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.01, .07)*Ss;
+            this.dy = rnd(-.04, .04)*Ss;
         } else {
             const edge = Math.floor(Math.random() * 4);
             if(edge === 0){      this.x = -this.r - 20;    this.y = rnd(0, H); }
@@ -201,7 +208,7 @@ class Galaxy {
             const targetX = W * rnd(0.25, 0.75);
             const targetY = H * rnd(0.25, 0.75);
             const angle = Math.atan2(targetY - this.y, targetX - this.x);
-            const spd = rnd(.01, .07);
+            const spd = rnd(.01, .07)*Ss;
             this.dx = Math.cos(angle) * spd;
             this.dy = Math.sin(angle) * spd;
         }
@@ -217,8 +224,8 @@ class Galaxy {
         this.dx += rnd(-.002, .002);
         this.dy = (this.dy || 0) + rnd(-.002, .002);
         const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-        if(spd > 0.09){ this.dx = this.dx / spd * 0.09; this.dy = this.dy / spd * 0.09; }
-        if(spd < 0.01){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(spd > 0.09*Ss){ this.dx = this.dx / spd * 0.09*Ss; this.dy = this.dy / spd * 0.09*Ss; }
+        if(spd < 0.01*Ss){ this.dx *= 1.05; this.dy *= 1.05; }
         if(this.x < -this.r - 80 || this.x > W + this.r + 80 ||
         this.y < -this.r - 80 || this.y > H + this.r + 80) this.reset(false);
     }
@@ -305,12 +312,12 @@ class Galaxy {
 class Sun {
     constructor(){ this.reset(true); }
     reset(init){
-        this.r = rnd(12, 30);
+        this.r = rnd(12, 30)*S;
         if(init){
             this.x = rnd(0, W || 1200);
             this.y = rnd(this.r, (H || 800) - this.r);
-            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.03, .12);
-            this.dy = rnd(-.05, .05);
+            this.dx = (Math.random() < .5 ? 1 : -1) * rnd(.03, .12)*Ss;
+            this.dy = rnd(-.05, .05)*Ss;
         } else {
             const edge = Math.floor(Math.random() * 4);
             if(edge === 0){      this.x = -this.r - 10;    this.y = rnd(0, H); }
@@ -320,7 +327,7 @@ class Sun {
             const targetX = W * rnd(0.25, 0.75);
             const targetY = H * rnd(0.25, 0.75);
             const angle = Math.atan2(targetY - this.y, targetX - this.x);
-            const spd = rnd(.03, .12);
+            const spd = rnd(.03, .12)*Ss;
             this.dx = Math.cos(angle) * spd;
             this.dy = Math.sin(angle) * spd;
         }
@@ -335,8 +342,8 @@ class Sun {
         this.dx += rnd(-.004, .004);
         this.dy += rnd(-.004, .004);
         const spd = Math.sqrt(this.dx * this.dx + this.dy * this.dy);
-        if(spd > 0.15){ this.dx = this.dx / spd * 0.15; this.dy = this.dy / spd * 0.15; }
-        if(spd < 0.03){ this.dx *= 1.05; this.dy *= 1.05; }
+        if(spd > 0.15*Ss){ this.dx = this.dx / spd * 0.15*Ss; this.dy = this.dy / spd * 0.15*Ss; }
+        if(spd < 0.03*Ss){ this.dx *= 1.05; this.dy *= 1.05; }
         if(this.x < -this.r - 60 || this.x > W + this.r + 60 ||
         this.y < -this.r - 60 || this.y > H + this.r + 60) this.reset(false);
     }
@@ -349,7 +356,7 @@ class Sun {
 }
 class Comet {
     constructor(){ this.reset(true); }
-    reset(init){ const fl=Math.random()<.5; this.y=rnd(0,H||800); this.x=init?rnd(0,W||1200):(fl?-20:(W||1200)+20); this.spd=rnd(2.5,6); this.dx=fl?this.spd:-this.spd; this.dy=rnd(-.8,.8); this.tailLen=rnd(60,160); this.r=rnd(1.5,3.5); this.col=pick(['#ffffff','#aaffff','#ffeedd','#ffcc88','#88ccff']); this.life=rnd(180,400); this.maxLife=this.life; }
+    reset(init){ const fl=Math.random()<.5; this.y=rnd(0,H||800); this.x=init?rnd(0,W||1200):(fl?-20:(W||1200)+20); this.spd=rnd(2.5,6)*Ss; this.dx=fl?this.spd:-this.spd; this.dy=rnd(-.8,.8)*Ss; this.tailLen=rnd(60,160)*S; this.r=rnd(1.5,3.5)*S; this.col=pick(['#ffffff','#aaffff','#ffeedd','#ffcc88','#88ccff']); this.life=rnd(180,400); this.maxLife=this.life; }
     update(){ this.x+=this.dx; this.y+=this.dy; this.life--; if(this.life<=0||this.x<-200||this.x>W+200) this.reset(false); }
     draw(){
         const alpha=Math.min(1,this.life/30)*.85, angle=Math.atan2(this.dy,this.dx);
@@ -373,23 +380,22 @@ const NEBULA_COLS=[
   ['#882200','#ff4422'],['#660033','#ff2255'],
 ];
 class Nebula {
-    constructor(){ this._bc=document.createElement('canvas'); this._bctx=this._bc.getContext('2d'); this._baked=false; this.reset(true); }
+    constructor(){ this._bc=document.createElement('canvas'); this._bctx=this._bc.getContext('2d'); this.reset(true); }
     reset(init){
         this.x=rnd(0,W||1200); this.y=rnd(0,H||800);
-        this.r=IS_MOBILE?rnd(80,180):rnd(130,340);
+        this.r=rnd(130,340)*S;
         const warm=Math.random()<0.17;
         const pool=warm?NEBULA_COLS.slice(8):NEBULA_COLS.slice(0,8);
         const [c1,c2]=pick(pool);
         this.col=c1; this.col2=c2;
         this.rot=rnd(0,Math.PI*2); this.rotSpd=rnd(-.00015,.00015);
         this.dx=rnd(-.03,.03); this.dy=rnd(-.015,.015);
-        const lobeCount=IS_MOBILE?Math.floor(rnd(2,4)):Math.floor(rnd(3,6));
-        this.lobes=Array.from({length:lobeCount},()=>({
+        this.lobes=Array.from({length:Math.floor(rnd(3,6))},()=>({
             ox:rnd(-.4,.4), oy:rnd(-.4,.4),
             sx:rnd(.6,1.3),  sy:rnd(.5,1.0),
             a:rnd(.035,.08), r:rnd(.5,.9),
         }));
-        this._baked=false; // deferred — loop bakes one per frame
+        this._bake();
     }
     _bake(){
         // Render the nebula shape once into a local canvas sized to 2.8r × 2.8r
@@ -421,12 +427,10 @@ class Nebula {
             gc.beginPath(); gc.arc(0,0,lr,0,Math.PI*2); gc.fill();
             gc.restore();
         });
-        this._baked=true;
     }
     // Called on a slow timer (every 90 frames), NOT every frame
     updatePosition(){ this.x+=this.dx*90; this.y+=this.dy*90; this.rot+=this.rotSpd*90; if(this.x<-this.r*2||this.x>W+this.r*2||this.y<-this.r*2||this.y>H+this.r*2) this.reset(false); }
     drawTo(gc){
-        if(!this._baked) return;
         const sz=this._bc.width;
         gc.save(); gc.translate(this.x,this.y); gc.rotate(this.rot);
         gc.drawImage(this._bc,-sz/2,-sz/2);

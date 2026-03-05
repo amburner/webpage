@@ -80,10 +80,10 @@ function spawnCreature(key, x, y, parent){
     return {
         id:creatureIdCounter++, species:key, diet:def.diet,
         x:x??rnd(50,W-50), y:y??rnd(50,H-50),
-        vx:rnd(-.5,.5), vy:rnd(-.5,.5),
-        size:   parent?mut(parent.size,1.2)   :rnd(def.size[0],def.size[1]),
-        speed:  parent?mut(parent.speed,.08)  :rnd(def.speed[0],def.speed[1]),
-        sense:  parent?mut(parent.sense,6)    :def.sense,
+        vx:rnd(-.5,.5)*Ss, vy:rnd(-.5,.5)*Ss,
+        size:   parent?mut(parent.size,1.2)   :rnd(def.size[0],def.size[1])*S,
+        speed:  parent?mut(parent.speed,.08)  :rnd(def.speed[0],def.speed[1])*Ss,
+        sense:  parent?mut(parent.sense,6)    :def.sense*S,
         reproduce: parent?clamp(parent.reproduce+rnd(-.00008,.00008),.00003,.0015):def.reproduce,
         color:  parent?lineageDrift(parent.color):def.baseColor,
         energy:160, age:0, maxAge:rnd(2500,6000), reproduced:false,
@@ -145,14 +145,14 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     if(c.age>c.maxAge||c.energy<=0) return false;
 
     if(window._zergActive){
-        const ef=150;
-        if(c.x<ef) c.vx+=.08; if(c.x>W-ef) c.vx-=.08;
-        if(c.y<ef) c.vy+=.08; if(c.y>H-ef) c.vy-=.08;
+        const ef=150*S;
+        if(c.x<ef) c.vx+=.08*Ss; if(c.x>W-ef) c.vx-=.08*Ss;
+        if(c.y<ef) c.vy+=.08*Ss; if(c.y>H-ef) c.vy-=.08*Ss;
         if(Math.min(c.x,W-c.x,c.y,H-c.y)<ef) c._scared=Math.max(c._scared,10);
     }
 
     // OPTIMIZED: use spatial hash instead of scanning all creatures
-    const nearby=spatialHash.query(c.x,c.y,Math.max(c.sense*2, 200));
+    const nearby=spatialHash.query(c.x,c.y,Math.max(c.sense*2, 200*S));
 
     let threatDx=0,threatDy=0,threatD=Infinity;
     let preyDx=0,preyDy=0,preyD=Infinity;
@@ -270,8 +270,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
                     c.energy+=(1-d/s.grav)*2.5*godMode.foodMult;
                 }
             });
-            stars.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<80) c.energy+=.6*godMode.foodMult; });
-            const edgeD=Math.min(c.x,c.y,W-c.x,H-c.y); if(edgeD<120) c.energy+=(1-edgeD/120)*1.5*godMode.foodMult;
+            stars.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<80*S) c.energy+=.6*godMode.foodMult; });
+            const edgeD=Math.min(c.x,c.y,W-c.x,H-c.y); if(edgeD<120*S) c.energy+=(1-edgeD/(120*S))*1.5*godMode.foodMult;
             c.energy+=.04*godMode.foodMult;
         }
         foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r) c.energy+=3*godMode.foodMult; });
@@ -286,7 +286,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         c._wanderAngle += clamp(rnd(-.03,.03), -.025, .025);
 
         // Near a wall — steer wander angle back toward center
-        const edgePad = 150;
+        const edgePad = 150*S;
         let wallBias = 0;
         if(c.x < edgePad)     wallBias =  Math.PI * 0.5 * (1 - c.x / edgePad);
         if(c.x > W - edgePad) wallBias = -Math.PI * 0.5 * (1 - (W - c.x) / edgePad);
@@ -314,20 +314,20 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     const maxSpd=c._scared>0?c.speed*3.5:c.speed*szPen*(c._crowdFactor||1);
     if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
     if(c._scared>0){c.vx*=.97;c.vy*=.97;}
-    if(spd<.05&&c._scared<=0){c.vx+=rnd(-.04,.04);c.vy+=rnd(-.04,.04);}
+    if(spd<.05*Ss&&c._scared<=0){c.vx+=rnd(-.04,.04)*Ss;c.vy+=rnd(-.04,.04)*Ss;}
     // Soft gradient boundary push
-    const pad = 120;
+    const pad = 120*S;
     if(c.x < pad)     c.vx += (pad - c.x) / pad * 0.3;
     if(c.x > W - pad) c.vx -= (c.x - (W - pad)) / pad * 0.3;
     if(c.y < pad)     c.vy += (pad - c.y) / pad * 0.3;
     if(c.y > H - pad) c.vy -= (c.y - (H - pad)) / pad * 0.3;
 
     // Hard reflect at true edge
-    const hardPad = 20;
-    if(c.x < hardPad)     { c.vx = Math.abs(c.vx) + 0.2; c._wanderAngle = rnd(-0.5, 0.5); }
-    if(c.x > W - hardPad) { c.vx = -(Math.abs(c.vx) + 0.2); c._wanderAngle = Math.PI + rnd(-0.5, 0.5); }
-    if(c.y < hardPad)     { c.vy = Math.abs(c.vy) + 0.2; }
-    if(c.y > H - hardPad) { c.vy = -(Math.abs(c.vy) + 0.2); }
+    const hardPad = 20*S;
+    if(c.x < hardPad)     { c.vx = Math.abs(c.vx) + 0.2*Ss; c._wanderAngle = rnd(-0.5, 0.5); }
+    if(c.x > W - hardPad) { c.vx = -(Math.abs(c.vx) + 0.2*Ss); c._wanderAngle = Math.PI + rnd(-0.5, 0.5); }
+    if(c.y < hardPad)     { c.vy = Math.abs(c.vy) + 0.2*Ss; }
+    if(c.y > H - hardPad) { c.vy = -(Math.abs(c.vy) + 0.2*Ss); }
 
     c.x += c.vx; c.y += c.vy;
 
@@ -341,7 +341,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     const mateOk=mateFound&&mateFound.energy>mateEnergyMin;
     if(c.energy>energyThreshold&&mateOk&&Math.random()<reproRate*densityPenalty&&creatures.length<POP_CAP){
         c.reproduced=true; mateFound.energy*=.6; c.energy*=.45;
-        const child=spawnCreature(c.species,c.x+rnd(-20,20),c.y+rnd(-20,20),c);
+        const child=spawnCreature(c.species,c.x+rnd(-20,20)*S,c.y+rnd(-20,20)*S,c);
         c._children.push(child.id); newChildren.push(child);
         if(child.generation>generationCount){ generationCount=child.generation; if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`); }
         if(!traitHistory[c.species]) traitHistory[c.species]=[];

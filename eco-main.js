@@ -11,11 +11,11 @@ const suns   =Array.from({length:IS_MOBILE?2:4},    ()=>new Sun());
 const comets =Array.from({length:IS_MOBILE?1:3},    ()=>new Comet());
 const nebulas=Array.from({length:IS_MOBILE?4:8},    ()=>new Nebula());
 
-// Defer heavy init so canvas paints its first frame before blocking JS work
+// Defer heavy creature init so canvas paints its first frame first
 window.addEventListener('load',()=>{
     resize();
     createInspectPanel(); createGraphPanel(); createTraitPanel(); createGodPanel(); addGodButton(); initInput();
-    loop(); // start rendering immediately — creatures and nebula bakes trickle in
+    loop();
     setTimeout(()=>initCreatures(), IS_MOBILE ? 200 : 0);
 });
 
@@ -34,7 +34,7 @@ function loop(){
     spatialHash.clear();
     creatures.forEach(c=>spatialHash.insert(c));
 
-    // Bake one unbaked nebula per frame — spreads load across first 4-8 frames
+    // Bake one unbaked nebula per frame — spreads startup cost across first N frames
     const unbaked=nebulas.find(n=>!n._baked);
     if(unbaked){ unbaked._bake(); _bgDirty=true; }
 
@@ -42,7 +42,7 @@ function loop(){
     _nebulaUpdateTimer++;
     if(_nebulaUpdateTimer>=90){ _nebulaUpdateTimer=0; nebulas.forEach(n=>n.updatePosition()); _bgDirty=true; }
 
-    // Rebuild BG cache only when day phase changes meaningfully
+    // Rebuild BG cache only when day phase changes meaningfully (roughly every 10-15 frames)
     const dayChanged=Math.abs(dayT-_lastBgDayT)>0.004;
     if(dayChanged||_bgDirty){
         renderBgToCache(nebulas);
@@ -61,7 +61,6 @@ function loop(){
     galaxies.forEach(g=>{g.update();g.draw();});
     suns.forEach(s=>{s.update();s.draw();});
     planets.forEach(p=>{p.update();p.draw();});
-    // Skip comet updates every other frame on mobile
     if(!IS_MOBILE||frameCount%2===0) comets.forEach(c=>{c.update();c.draw();});
 
     const newChildren=[];
