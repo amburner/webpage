@@ -6,8 +6,7 @@
 // ── INSPECT PANEL ─────────────────────────────────────────────────────────
 let inspectedCreature=null, inspectPanel=null;
 function createInspectPanel(){
-    inspectPanel=document.createElement('div'); inspectPanel.id='eco-inspect';
-    inspectPanel.style.cssText="position:fixed;top:50%;right:16px;transform:translateY(-50%);background:#0d0010ee;border:1px solid #cc00ff;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:11px;padding:12px;z-index:9000;min-width:180px;max-width:220px;display:none;line-height:1.6;pointer-events:auto;";
+    inspectPanel=document.createElement('div'); inspectPanel.id='eco-inspect'; // sizing via eco-styles.css
     document.body.appendChild(inspectPanel);
 }
 function updateInspectPanel(){
@@ -34,9 +33,12 @@ function closeInspect(){ inspectedCreature=null; if(inspectPanel) inspectPanel.s
 // ── GRAPH ─────────────────────────────────────────────────────────────────
 let graphCanvas,graphCtx,showGraph=false;
 function createGraphPanel(){
-    graphCanvas=document.createElement('canvas'); graphCanvas.width=screen.width/3; graphCanvas.height=screen.width/6;
-    graphCanvas.style.cssText='position:fixed;top:16px;right:16px;z-index:9000;border:1px solid #cc00ff66;display:none;background:#0d0010bb;pointer-events:none;opacity:0.75;';
+    graphCanvas=document.createElement('canvas');
+    graphCanvas.id='eco-graph-canvas'; // sizing via eco-styles.css
+    // Keep internal buffer in sync with CSS-rendered size
+    const _syncGraph=()=>{ graphCanvas.width=graphCanvas.offsetWidth||360; graphCanvas.height=graphCanvas.offsetHeight||180; };
     document.body.appendChild(graphCanvas); graphCtx=graphCanvas.getContext('2d');
+    new ResizeObserver(_syncGraph).observe(graphCanvas);
 }
 function drawGraph(){
     if(!showGraph) return;
@@ -59,7 +61,7 @@ function drawGraph(){
 let traitPanel,showTraits=false;
 function createTraitPanel(){
     traitPanel=document.createElement('div');
-    traitPanel.style.cssText="position:fixed;bottom:130px;left:10px;z-index:9000;background:#0d0010cc;border:1px solid #cc00ff44;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:10px;padding:8px;display:none;pointer-events:none;min-width:160px;line-height:1.5;";
+    traitPanel.id='eco-trait-panel'; // sizing via eco-styles.css
     document.body.appendChild(traitPanel);
 }
 function updateTraitPanel(){
@@ -78,8 +80,7 @@ function updateTraitPanel(){
 // ── GOD MODE ──────────────────────────────────────────────────────────────
 let godPanel,showGod=false;
 function createGodPanel(){
-    godPanel=document.createElement('div'); godPanel.id='eco-god';
-    godPanel.style.cssText="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#0d0010f0;border:1px solid #ff00ff;color:#e8d5f5;font-family:'Share Tech Mono',monospace;font-size:12px;padding:16px 20px;z-index:9999;display:none;min-width:260px;pointer-events:auto;";
+    godPanel=document.createElement('div'); godPanel.id='eco-god'; // sizing via eco-styles.css
     godPanel.innerHTML=`<div style="color:#ff00ff;font-size:14px;margin-bottom:12px">⚡ GOD MODE</div>
         ${[['food','Food Mult','#ff00ff',0,5],['aggr','Predator Aggr','#cc00ff',0,3],['mut','Mutation Rate','#00fff5',0,5],['day','Day Speed','#ffff00',.1,10]].map(([id,label,col,mn,mx])=>`<div style="margin-bottom:8px"><label>${label}: <span id="god-${id}-val">1.0</span>x</label><br><input id="god-${id}" type="range" min="${mn}" max="${mx}" step="0.1" value="1" style="width:100%;accent-color:${col}"></div>`).join('')}
         <div style="color:#9b7db5;font-size:10px;margin-top:8px">press G to close</div>`;
@@ -103,13 +104,13 @@ function drawHUD(){
 
 // ── BUTTONS ───────────────────────────────────────────────────────────────
 function addGodButton(){
-    const mkBtn=(label,col,bottom,onClick)=>{
+    const mkBtn=(label,col,cls,bottom,onClick)=>{
         const b=document.createElement('button');
-        b.innerText=label; b.style.cssText=`position:fixed;bottom:${bottom}px;left:18px;z-index:99998;background:#0d0010;color:${col};font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid ${col};cursor:pointer;text-shadow:0 0 8px ${col};box-shadow:0 0 15px ${col}44;letter-spacing:1px;`;
+        b.innerText=label; b.className='eco-btn '+cls; b.style.color=col; b.style.borderColor=col; b.style.textShadow=`0 0 8px ${col}`; b.style.boxShadow=`0 0 15px ${col}44`;
         b.addEventListener('click',onClick); document.body.appendChild(b); return b;
     };
-    mkBtn('⚡ GOD MODE','#ffff00',122,()=>{ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; });
-    mkBtn('📈 GRAPH','#00fff5',174,()=>{
+    mkBtn('⚡ GOD MODE','#ffff00','eco-btn-god',122,()=>{ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; });
+    mkBtn('📈 GRAPH','#00fff5','eco-btn-graph',174,()=>{
         showGraph=!showGraph; showTraits=showGraph;
         graphCanvas.style.display=showGraph?'block':'none';
         if(traitPanel) traitPanel.style.display=showTraits?'block':'none';

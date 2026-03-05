@@ -134,14 +134,13 @@ function startZergRush(){
     ov.addEventListener('click',e=>{ ov.style.display='none'; const el=document.elementFromPoint(e.clientX,e.clientY); ov.style.display=''; if(el?.tagName==='SUMMARY') el.closest('details').toggleAttribute('open'); });
     document.body.appendChild(ov);
     document.querySelectorAll('.project').forEach(c=>{ c._bh={top:100,right:100,bottom:100,left:100}; c._zergDead=false; c.style.cssText=''; });
-    zergScoreEl=document.createElement('div'); zergScoreEl.id='zerg-score';
-    zergScoreEl.style.cssText='position:fixed;top:10px;right:14px;background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;font-size:16px;font-weight:bold;padding:6px 12px;border:3px solid #ff0000;z-index:99999;text-shadow:0 0 6px #ff0000;pointer-events:none;';
+    zergScoreEl=document.createElement('div'); zergScoreEl.id='zerg-score'; // sizing via eco-styles.css
     zergScoreEl.innerText='☠ KILLS: 0'; document.body.appendChild(zergScoreEl);
     const msg=document.createElement('div');
     msg.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#000;color:#ff0000;font-family:"Comic Sans MS",monospace;font-size:28px;font-weight:bold;padding:20px 32px;border:4px solid #ff0000;z-index:99999;text-align:center;text-shadow:0 0 10px #ff0000;pointer-events:none;';
     msg.innerHTML='🐞 ZERG RUSH! 🐞<br><span style="font-size:16px">CLICK THE ZERGLINGS TO KILL THEM!</span>';
     document.body.appendChild(msg); setTimeout(()=>msg.remove(),2200);
-    zergBtn.innerText='🛑 END RUSH'; zergBtn.style.background='#ff0000'; zergBtn.style.color='#fff';
+    zergBtn.innerText='🛑 END RUSH'; zergBtn.className='eco-btn eco-btn-zerg'; zergBtn.style.background='#ff0000'; zergBtn.style.color='#fff'; zergBtn.style.borderColor='#ff0000';
     let wn=0; spawnWave();
     zergSpawnInt=setInterval(()=>{ spawnWave(); wn++; },5000-250*wn);
     zergInt=setInterval(tickZerg,16);
@@ -163,18 +162,18 @@ function endZergRush(){
         c._bh=undefined; c._zergDead=false; c.style.opacity=''; c.style.filter=''; c.style.border='';
         ['Top','Right','Bottom','Left'].forEach(s=>{ c.style[`border${s}Width`]=''; c.style[`border${s}Style`]=''; });
     });
-    zergBtn.innerText='🐞 ZERG RUSH'; zergBtn.style.background='#0d0010'; zergBtn.style.color='#ff00ff';
+    zergBtn.innerText='🐞 ZERG RUSH'; zergBtn.className='eco-btn eco-btn-zerg'; zergBtn.style.color='#ff00ff'; zergBtn.style.borderColor='#ff00ff'; zergBtn.style.textShadow='0 0 8px #ff00ff'; zergBtn.style.boxShadow='0 0 15px rgba(255,0,255,0.4)';
 }
 function addZergButton(){
     zergBtn=document.createElement('button');
     zergBtn.innerText='🐞 ZERG RUSH';
-    zergBtn.style.cssText='position:fixed;bottom:18px;left:18px;z-index:99998;background:#0d0010;color:#ff00ff;font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid #ff00ff;cursor:pointer;text-shadow:0 0 8px #ff00ff;box-shadow:0 0 15px rgba(255,0,255,0.4);letter-spacing:1px;';
+    zergBtn.className='eco-btn eco-btn-zerg'; zergBtn.style.color='#ff00ff'; zergBtn.style.borderColor='#ff00ff'; zergBtn.style.textShadow='0 0 8px #ff00ff'; zergBtn.style.boxShadow='0 0 15px rgba(255,0,255,0.4)';
     zergBtn.addEventListener('click',startZergRush); document.body.appendChild(zergBtn);
 }
 function addHideButton(){
     const btn=document.createElement('button');
     btn.innerText='🙈 HIDE PROJECTS';
-    btn.style.cssText='position:fixed;bottom:70px;left:18px;z-index:99998;background:#0d0010;color:#cc00ff;font-family:"Comic Sans MS",monospace;font-size:15px;font-weight:bold;padding:10px 18px;border:2px solid #cc00ff;cursor:pointer;text-shadow:0 0 8px #cc00ff;box-shadow:0 0 15px rgba(204,0,255,0.4);letter-spacing:1px;';
+    btn.className='eco-btn eco-btn-hide'; btn.style.color='#cc00ff'; btn.style.borderColor='#cc00ff'; btn.style.textShadow='0 0 8px #cc00ff'; btn.style.boxShadow='0 0 15px rgba(204,0,255,0.4)';
     let hidden=false;
     const ECO=new Set(['ecosystem-canvas','eco-inspect','eco-god']);
     btn.addEventListener('click',()=>{
