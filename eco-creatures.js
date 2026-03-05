@@ -180,8 +180,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
         const sense2prey=(c.sense*godMode.aggrMult)*(c.sense*godMode.aggrMult);
         if(isPrey&&d<sense2prey&&d<preyD){ preyDx=o.x-c.x; preyDy=o.y-c.y; preyD=d; }
-        if(c._breedCooldown<=0&&c.age>=def.minBreedAge&&o.species===c.species&&o.energy>def.mateEnergyMin&&o._breedCooldown<=0){
-            // Predators get wider mate detection — they're spread out and need to find each other
+        const _mateMin = c.diet==='herb' ? 110 : 80;
+        if(c._breedCooldown<=0&&c.age>=def.minBreedAge&&o.species===c.species&&o.energy>_mateMin&&o._breedCooldown<=0){            // Predators get wider mate detection — they're spread out and need to find each other
             const mateSearchR = c.diet==='herb' ? c.sense*2 : c.sense*3.5;
             if(d<mateSearchR*mateSearchR&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
         }
@@ -279,10 +279,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         }
 
         // Universal core repulsion — only if not already committed to a hunt/flee
-        if(!dominated){
+        if(!dominated && c.diet!=='apex'){
             [...planets,...galaxies,...suns].forEach(obj=>{
                 const dx=obj.x-c.x, dy=obj.y-c.y, dist=Math.sqrt(dx*dx+dy*dy)||1;
-                const coreR=obj.r*(c.diet==='herb'?0.9:1.1);
+                const coreR=obj.r*1.1;
                 if(dist<coreR){ desiredX-=dx/dist*c.speed*1.5; desiredY-=dy/dist*c.speed*1.5; dominated=true; }
             });
         }
