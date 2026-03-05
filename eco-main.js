@@ -1,22 +1,59 @@
 // =============================================
 // COSMIC ECOSYSTEM — INIT & MAIN LOOP
-// Depends on: eco-canvas.js, eco-creatures.js, eco-ui.js
+// Depends on: eco-sync.js, eco-canvas.js, eco-creatures.js, eco-ui.js
 // =============================================
 
 // ── INIT & LOOP ───────────────────────────────────────────────────────────
-const stars  =Array.from({length:IS_MOBILE?50:90},  ()=>new Star());
-const planets=Array.from({length:IS_MOBILE?3:5},    ()=>new Planet());
-const galaxies=Array.from({length:IS_MOBILE?1:2},   ()=>new Galaxy());
-const suns   =Array.from({length:IS_MOBILE?2:4},    ()=>new Sun());
-const comets =Array.from({length:IS_MOBILE?1:3},    ()=>new Comet());
-const nebulas=Array.from({length:IS_MOBILE?4:8},    ()=>new Nebula());
+const stars  =Array.from({length:90}, ()=>new Star());
+const planets=Array.from({length:5},  ()=>new Planet());
+const galaxies=Array.from({length:2}, ()=>new Galaxy());
+const suns   =Array.from({length:4},  ()=>new Sun());
+const comets =Array.from({length:3},  ()=>new Comet());
+const nebulas=Array.from({length:8},  ()=>new Nebula());
 
-// Defer heavy creature init so canvas paints its first frame first
-window.addEventListener('load',()=>{
+window.addEventListener('load', async ()=>{
     resize();
+
+    // Wait for Firebase sync to load remote state before spawning creatures
+    await new Promise(resolve => {
+        if(window.ecoSyncReady){ resolve(); return; }
+        const check = setInterval(()=>{
+            if(window.ecoSyncReady){ clearInterval(check); resolve(); }
+        }, 100);
+    });
+
+    // Only spawn fresh creatures if sync didn't load any
+    if(!window.creatures || window.creatures.length === 0){
+        initCreatures();
+    } else {
+        creatures = window.creatures;
+    }
+
+    // Expose locals to window so eco-sync.js can read/write them
+    Object.defineProperty(window, 'creatures',       { get:()=>creatures,       set:v=>{ creatures=v; },       configurable:true });
+    Object.defineProperty(window, 'generationCount', { get:()=>generationCount, set:v=>{ generationCount=v; }, configurable:true });
+    Object.defineProperty(window, 'evoLog',          { get:()=>evoLog,          set:v=>{ evoLog=v; },          configurable:true });
+    Object.defineProperty(window, 'frameCount',      { get:()=>frameCount,      set:v=>{ frameCount=v; },      configurable:true });
+    Object.defineProperty(window, 'dayPhase',        { get:()=>dayPhase,        set:v=>{ dayPhase=v; },        configurable:true });
+    Object.defineProperty(window, 'stars',   { get:()=>stars,   configurable:true });
+    Object.defineProperty(window, 'planets', { get:()=>planets, configurable:true });
+    Object.defineProperty(window, 'galaxies',{ get:()=>galaxies,configurable:true });
+    Object.defineProperty(window, 'suns',    { get:()=>suns,    configurable:true });
+    Object.defineProperty(window, 'nebulas', { get:()=>nebulas, configurable:true });
+
+    if(window._pendingCelestials){
+        const d = window._pendingCelestials;
+        if(d.stars)    stars.forEach((s,i)=>{ if(d.stars[i])    Object.assign(s,d.stars[i]); });
+        if(d.planets)  planets.forEach((p,i)=>{ if(d.planets[i])  Object.assign(p,d.planets[i]); });
+        if(d.galaxies) galaxies.forEach((g,i)=>{ if(d.galaxies[i]) Object.assign(g,d.galaxies[i]); });
+        if(d.suns)     suns.forEach((s,i)=>{ if(d.suns[i])     Object.assign(s,d.suns[i]); });
+        if(d.nebulas)  nebulas.forEach((n,i)=>{ if(d.nebulas[i]) Object.assign(n,d.nebulas[i]); });
+        _bgDirty = true;
+        delete window._pendingCelestials;
+    }
+
     createInspectPanel(); createGraphPanel(); createTraitPanel(); createGodPanel(); addGodButton(); initInput();
     loop();
-    setTimeout(()=>initCreatures(), IS_MOBILE ? 200 : 0);
 });
 
 let frameCount=0;
@@ -30,38 +67,28 @@ function loop(){
     updateDayNight();
     for(let i=1;i<Math.floor(window._daySpeedMult||1);i++) updateDayNight();
 
-    // Rebuild spatial hash once per frame
     spatialHash.clear();
     creatures.forEach(c=>spatialHash.insert(c));
 
-    // Bake one unbaked nebula per frame — spreads startup cost across first N frames
-    const unbaked=nebulas.find(n=>!n._baked);
-    if(unbaked){ unbaked._bake(); _bgDirty=true; }
-
-    // Nebulas drift very slowly — update position every 90 frames only
     _nebulaUpdateTimer++;
     if(_nebulaUpdateTimer>=90){ _nebulaUpdateTimer=0; nebulas.forEach(n=>n.updatePosition()); _bgDirty=true; }
 
-    // Rebuild BG cache only when day phase changes meaningfully (roughly every 10-15 frames)
     const dayChanged=Math.abs(dayT-_lastBgDayT)>0.004;
     if(dayChanged||_bgDirty){
         renderBgToCache(nebulas);
         _lastBgDayT=dayT;
     }
 
-    // Blit cached background — single drawImage, no gradient work
     ctx.drawImage(_bgCanvas,0,0);
-
     updateDrawBlooms();
 
-    // Stars update every 3 frames on desktop, 4 on mobile
-    if(frameCount%(IS_MOBILE?4:3)===0) stars.forEach(s=>s.update());
+    if(frameCount%3===0) stars.forEach(s=>s.update());
     drawStarsBatched(stars);
 
     galaxies.forEach(g=>{g.update();g.draw();});
     suns.forEach(s=>{s.update();s.draw();});
     planets.forEach(p=>{p.update();p.draw();});
-    if(!IS_MOBILE||frameCount%2===0) comets.forEach(c=>{c.update();c.draw();});
+    comets.forEach(c=>{c.update();c.draw();});
 
     const newChildren=[];
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });

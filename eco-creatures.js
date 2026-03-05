@@ -57,12 +57,18 @@ function nnForward(w, inputs){
 // ── CREATURES ─────────────────────────────────────────────────────────────
 let generationCount=0, creatureIdCounter=0;
 const SPECIES_DEFS={
-    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0], sense:60,  reproduce:0.0012,activeAtNight:true },
-    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8], sense:80,  reproduce:0.0009,activeAtNight:false},
-    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5], sense:40,  reproduce:0.0012,activeAtNight:false},
-    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4], sense:120, reproduce:0.0006,activeAtNight:true },
-    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9], sense:100, reproduce:0.0006,activeAtNight:true },
-    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[40,80], speed:[0.30,0.75],sense:200,reproduce:0.0002,activeAtNight:true },
+    jellyfish:  {diet:'herb',baseColor:'#dd88ff',size:[8,16],  speed:[0.4,1.0], sense:60,  reproduce:0.0012,activeAtNight:true,
+                 minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], huntHunger:null},
+    manta:      {diet:'herb',baseColor:'#00fff5',size:[14,24], speed:[0.3,0.8], sense:80,  reproduce:0.0009,activeAtNight:false,
+                 minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], huntHunger:null},
+    seahorse:   {diet:'herb',baseColor:'#ff6ec7',size:[6,12],  speed:[0.2,0.5], sense:40,  reproduce:0.0012,activeAtNight:false,
+                 minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], huntHunger:null},
+    shark:      {diet:'carn',baseColor:'#cc00ff',size:[18,32], speed:[0.6,1.4], sense:120, reproduce:0.0006,activeAtNight:true,
+                 minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], huntHunger:130},
+    anglerfish: {diet:'carn',baseColor:'#ff2d78',size:[14,26], speed:[0.3,0.9], sense:100, reproduce:0.0006,activeAtNight:true,
+                 minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], huntHunger:125},
+    leviathan:  {diet:'apex',baseColor:'#ff6b35',size:[40,80], speed:[0.30,0.75],sense:200,reproduce:0.0002,activeAtNight:true,
+                 minBreedAge:1200, breedCooldown:1800, litterSize:[1,1], huntHunger:155},
 };
 let creatures=[], evoLog=[];
 let popHistory={jellyfish:[],manta:[],seahorse:[],shark:[],anglerfish:[],leviathan:[]};
@@ -86,13 +92,14 @@ function spawnCreature(key, x, y, parent){
         sense:  parent?mut(parent.sense,6)    :def.sense*S,
         reproduce: parent?clamp(parent.reproduce+rnd(-.00008,.00008),.00003,.0015):def.reproduce,
         color:  parent?lineageDrift(parent.color):def.baseColor,
-        energy:160, age:0, maxAge:rnd(2500,6000), reproduced:false,
+        energy: parent ? (def.diet==='herb' ? 200 : 185) : 160,
+        age:0, maxAge:rnd(2500,6000), reproduced:false,
         frame:Math.random()*Math.PI*2,
         generation: parent?parent.generation+1:0,
         parentId: parent?parent.id:null,
         socialTrait: parent?clamp(parent.socialTrait+rnd(-.05,.08),0,1):rnd(0,.3),
         nnWeights: parent ? mutateWeights(parent.nnWeights) : randomWeights(),
-        _wanderAngle:Math.random()*Math.PI*2, _scared:0, _newborn:parent?60:0, _children:[],
+        _wanderAngle:Math.random()*Math.PI*2, _scared:0, _newborn:parent?60:0, _children:[], _breedCooldown:0,
     };
 }
 function initCreatures(){
@@ -111,7 +118,12 @@ function drawCreature(c){
     c.frame+=.05*c.speed*(c._scared>0?2:1);
     const w=Math.sin(c.frame)*s*.15;
     const nightDim=def.activeAtNight?1.0:0.3+0.7*dayT;
-    if(c._newborn>0){ ctx.globalAlpha=(c._newborn/60)*.7; ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.arc(0,0,s*1.6,0,Math.PI*2); ctx.fill(); }
+    if(c._newborn>0){
+        ctx.globalAlpha=(c._newborn/60)*.7;
+        ctx.fillStyle='#ffffff';
+        ctx.beginPath(); ctx.arc(0,0,s*1.6,0,Math.PI*2); ctx.fill();
+        ctx.globalAlpha=1; // reset before main body draw
+    }
     ctx.globalAlpha=clamp(c.energy/120,.3,1.0)*nightDim;
     ctx.fillStyle=c._scared>0?'#ffffff':c.color;
     switch(c.species){
@@ -167,7 +179,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
         const sense2prey=(c.sense*godMode.aggrMult)*(c.sense*godMode.aggrMult);
         if(isPrey&&d<sense2prey&&d<preyD){ preyDx=o.x-c.x; preyDy=o.y-c.y; preyD=d; }
-        if(!c.reproduced&&o.species===c.species&&o.energy>130){
+        if(c._breedCooldown<=0&&c.age>=def.minBreedAge&&o.species===c.species&&o.energy>130&&o._breedCooldown<=0){
             const sense2mate=(c.sense*2)*(c.sense*2);
             if(d<sense2mate&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
         }
@@ -218,6 +230,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         }
 
         if(!dominated&&preyD<Infinity&&huntWeight>0.4){
+            const hungry = def.huntHunger===null || c.energy < def.huntHunger;
+            if(hungry){
             const d=Math.sqrt(preyDx*preyDx+preyDy*preyDy)||1;
             if(c.diet==='apex'){
                 // Apex predators: bypass smoothing, commit velocity directly so they don't oscillate
@@ -226,11 +240,17 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
             desiredX=preyDx/d*c.speed*(c._crowdFactor||1); desiredY=preyDy/d*c.speed*(c._crowdFactor||1); dominated=true;
             // Kill check using nearby (already filtered)
             nearby.forEach(p=>{ if(p===c||p._dead) return; const isPrey=(c.diet==='carn'&&p.diet==='herb')||(c.diet==='apex'&&(p.diet==='herb'||p.diet==='carn')); if(!isPrey) return; const dx=p.x-c.x,dy=p.y-c.y,d2=Math.sqrt(dx*dx+dy*dy); if(d2<c.size+p.size){ c.energy+=p.size*14*(1+c.size*.04); p._dead=true; } });
+            }
         }
 
-        if(!dominated&&!c.reproduced&&mateD<Infinity&&mateWeight>0.5){
-            const d=Math.sqrt(mateDx*mateDx+mateDy*mateDy)||1;
-            desiredX=mateDx/d*c.speed; desiredY=mateDy/d*c.speed; dominated=true;
+        const breedRange = c.sense * 0.8; // breed when within 80% of sense radius — no need to collide
+        if(!dominated&&c._breedCooldown<=0&&c.age>=def.minBreedAge&&mateD<Infinity&&mateWeight>0.5){
+            const mateDistReal = Math.sqrt(mateD);
+            if(mateDistReal > breedRange){ // still approaching — steer toward mate
+                const d=mateDistReal||1;
+                desiredX=mateDx/d*c.speed; desiredY=mateDy/d*c.speed; dominated=true;
+            }
+            // if already in range just let them wander — breed check below handles it
         }
 
         if(!dominated&&(c.diet==='herb'||c.energy<80)){
@@ -257,7 +277,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
                     desiredX-=dx/d*c.speed*2; desiredY-=dy/d*c.speed*2; dominated=true;
                     c.energy-=1.5;
                 } else if(d<obj.r*2.5){
-                    c.energy+=2.2*godMode.foodMult;
+                    if(obj._feederCount===undefined||obj._feederCount<(obj._feederCap||8)){ if(obj._feederCount!==undefined) obj._feederCount++; c.energy+=2.2*godMode.foodMult; }
                 }
             });
             suns.forEach(s=>{
@@ -267,14 +287,14 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
                     desiredX-=dx/d*c.speed*2; desiredY-=dy/d*c.speed*2; dominated=true;
                     c.energy-=1.0;
                 } else if(d<s.grav){
-                    c.energy+=(1-d/s.grav)*2.5*godMode.foodMult;
+                    if(s._feederCount===undefined||s._feederCount<(s._feederCap||6)){ if(s._feederCount!==undefined) s._feederCount++; c.energy+=(1-d/s.grav)*2.5*godMode.foodMult; }
                 }
             });
             stars.forEach(s=>{ const dx=s.x-c.x,dy=s.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<80*S) c.energy+=.6*godMode.foodMult; });
             const edgeD=Math.min(c.x,c.y,W-c.x,H-c.y); if(edgeD<120*S) c.energy+=(1-edgeD/(120*S))*1.5*godMode.foodMult;
             c.energy+=.04*godMode.foodMult;
         }
-        foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r) c.energy+=3*godMode.foodMult; });
+        foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=Math.sqrt(dx*dx+dy*dy); if(d<b.r&&(b._feederCount===undefined||b._feederCount<(b._feederCap||3))){ if(b._feederCount!==undefined) b._feederCount++; c.energy+=3*godMode.foodMult; } });
     }
 
     if(!dominated&&_complexityUnlocked){
@@ -315,6 +335,27 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
     if(c._scared>0){c.vx*=.97;c.vy*=.97;}
     if(spd<.05*Ss&&c._scared<=0){c.vx+=rnd(-.04,.04)*Ss;c.vy+=rnd(-.04,.04)*Ss;}
+
+    // ── SEPARATION: perpendicular nudge keeps heading intact ─────────────
+    {
+        const hx=c.vx, hy=c.vy, hlen=Math.sqrt(hx*hx+hy*hy)||1;
+        const hnx=hx/hlen, hny=hy/hlen;
+        const px=hny, py=-hnx; // right-perp of heading
+        nearby.forEach(o=>{
+            if(o===c||o._dead) return;
+            const dx=c.x-o.x, dy=c.y-o.y, dist2=dx*dx+dy*dy;
+            const minD=(c.size+o.size)*0.9;
+            if(dist2>=minD*minD||dist2===0) return;
+            const dist=Math.sqrt(dist2);
+            const overlap=(minD-dist)/minD;
+            const nx=dx/dist, ny=dy/dist;
+            const perpDot=nx*px+ny*py;
+            const strength=overlap*c.speed*0.4;
+            c.vx+=px*perpDot*strength;
+            c.vy+=py*perpDot*strength;
+        });
+    }
+
     // Soft gradient boundary push
     const pad = 120*S;
     if(c.x < pad)     c.vx += (pad - c.x) / pad * 0.3;
@@ -331,25 +372,57 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
 
     c.x += c.vx; c.y += c.vy;
 
-    const reproRate=c.reproduce*godMode.mutMult;
-    // Per-species density pressure: halve reproduce chance if species already has >40% of total pop
-    const speciesCount=creatures.filter(x=>x.species===c.species).length;
-    const densityPenalty=speciesCount/(creatures.length||1)>0.4?0.4:1.0;
-    // Herbs need extra energy (160→170) and a mate with energy 130+; all need global cap
-    const energyThreshold = c.diet === 'herb' ? 170 : 130;
-    const mateEnergyMin   = c.diet === 'herb' ? 130 : 90;
-    const mateOk=mateFound&&mateFound.energy>mateEnergyMin;
-    if(c.energy>energyThreshold&&mateOk&&Math.random()<reproRate*densityPenalty&&creatures.length<POP_CAP){
-        c.reproduced=true; mateFound.energy*=.6; c.energy*=.45;
-        const child=spawnCreature(c.species,c.x+rnd(-20,20)*S,c.y+rnd(-20,20)*S,c);
-        c._children.push(child.id); newChildren.push(child);
-        if(child.generation>generationCount){ generationCount=child.generation; if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`); }
-        if(!traitHistory[c.species]) traitHistory[c.species]=[];
-        const sp=creatures.filter(x=>x.species===c.species);
-        if(sp.length){ const avgSz=sp.reduce((a,x)=>a+x.size,0)/sp.length, avgSpd=sp.reduce((a,x)=>a+x.speed,0)/sp.length; traitHistory[c.species].push({gen:child.generation,avgSize:avgSz,avgSpeed:avgSpd}); if(traitHistory[c.species].length>50) traitHistory[c.species].shift(); }
+    // ── REPRODUCTION ─────────────────────────────────────────────────────
+    if(c._breedCooldown>0) c._breedCooldown--;
+
+    const reproRate    = c.reproduce * godMode.mutMult;
+    const speciesCount = creatures.filter(x=>x.species===c.species).length;
+    const densityPenalty = speciesCount/(creatures.length||1)>0.4 ? 0.4 : 1.0;
+    const energyThreshold = c.diet==='herb' ? 170 : 130;
+    const mateEnergyMin   = c.diet==='herb' ? 130 : 90;
+
+    // Breed when mate is within sense range — no collision needed
+    const mateClose = mateFound && Math.sqrt(mateD) < c.sense * 0.9;
+    const mateOk    = mateClose && mateFound.energy > mateEnergyMin;
+    const mature    = c.age >= def.minBreedAge;
+    const cooled    = c._breedCooldown <= 0;
+
+    if(mature && cooled && c.energy>energyThreshold && mateOk
+       && Math.random()<reproRate*densityPenalty && creatures.length<POP_CAP){
+
+        const [litMin,litMax] = def.litterSize;
+        const litter = Math.min(
+            litMin + Math.floor(Math.random()*(litMax-litMin+1)),
+            POP_CAP - creatures.length - newChildren.length
+        );
+
+        if(litter > 0){
+            mateFound.energy *= Math.max(0.35, 1 - litter*0.12);
+            c.energy         *= Math.max(0.30, 1 - litter*0.15);
+            c._breedCooldown          = def.breedCooldown;
+            mateFound._breedCooldown  = def.breedCooldown;
+
+            for(let li=0; li<litter; li++){
+                const child = spawnCreature(c.species,
+                    c.x + rnd(-20,20)*S, c.y + rnd(-20,20)*S, c);
+                c._children.push(child.id);
+                newChildren.push(child);
+                if(child.generation>generationCount){
+                    generationCount=child.generation;
+                    if(evoLog.length<20) evoLog.push(`Gen ${child.generation}: ${child.species}`);
+                }
+            }
+            if(!traitHistory[c.species]) traitHistory[c.species]=[];
+            const sp = creatures.filter(x=>x.species===c.species);
+            if(sp.length){
+                const avgSz  = sp.reduce((a,x)=>a+x.size, 0)/sp.length;
+                const avgSpd = sp.reduce((a,x)=>a+x.speed,0)/sp.length;
+                const lastChild = newChildren[newChildren.length-1];
+                traitHistory[c.species].push({gen:lastChild.generation,avgSize:avgSz,avgSpeed:avgSpd});
+                if(traitHistory[c.species].length>50) traitHistory[c.species].shift();
+            }
+        }
     }
-    // Reset reproduced flag after a cooldown so predators can mate again
-    if(c.reproduced && c.energy>120 && c.age%300===0) c.reproduced=false;
     c.energy=clamp(c.energy,0,200);
     return true;
 }

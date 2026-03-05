@@ -98,14 +98,23 @@ function renderBgToCache(nebulas){
 
 // ── FOOD BLOOMS ───────────────────────────────────────────────────────────
 let foodBlooms=[], isDragging=false, dragBloomTimer=0;
-function addFoodBloom(x,y){ foodBlooms.push({x,y,r:60*S,life:300,maxLife:300}); }
+function addFoodBloom(x,y){ foodBlooms.push({x,y,r:60*S,life:300,maxLife:300,_feederCap:3,_feederCount:0}); }
 function updateDrawBlooms(){
     foodBlooms=foodBlooms.filter(b=>b.life>0);
     foodBlooms.forEach(b=>{
         b.life--;
+        b._feederCount=0; // reset each frame so the cap applies per-frame
         ctx.globalAlpha=(b.life/b.maxLife)*0.4;
         const g=ctx.createRadialGradient(b.x,b.y,0,b.x,b.y,b.r); g.addColorStop(0,'#00ffaa'); g.addColorStop(1,'#00ffaa00');        ctx.fillStyle=g; ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
     });
+}
+
+// Called once per frame from the main loop before creatures are updated,
+// so feeder counts from the previous frame are cleared.
+function resetFeederCounts(planets, galaxies, suns){
+    planets.forEach(o=>o._feederCount=0);
+    galaxies.forEach(o=>o._feederCount=0);
+    suns.forEach(o=>o._feederCount=0);
 }
 
 // ── CELESTIAL OBJECTS ─────────────────────────────────────────────────────
@@ -170,6 +179,8 @@ class Planet {
         this.rings = Math.random() < .4; this.ringTilt = rnd(.2, .6);
         this.rot = rnd(0, Math.PI * 2); this.rotSpd = rnd(-.004, .004);
         this.grav = this.r * 7; // r already scaled
+        this._feederCap   = Math.max(2, Math.round(this.r / (7*S))); // ~3-8 feeders
+        this._feederCount = 0;
     }
     update(){
         this.x += this.dx;
@@ -216,6 +227,8 @@ class Galaxy {
         this.arms = Math.floor(rnd(2, 5));
         this.col = pick(PALETTE); this.col2 = pick(PALETTE);
         this.grav = this.r * 6;
+        this._feederCap   = Math.max(3, Math.round(this.r / (6*S))); // ~7-17 feeders (galaxies are large)
+        this._feederCount = 0;
     }
     update(){
         this.x += this.dx;
@@ -334,6 +347,8 @@ class Sun {
         this.col = pick(['#ffffff','#ffe8aa','#ffcc44','#ffaa22','#ff8800']);
         this.pulse = rnd(0, Math.PI * 2); this.pulseSpd = rnd(.02, .05);
         this.grav = this.r * 5;
+        this._feederCap   = Math.max(2, Math.round(this.r / (5*S))); // ~2-6 feeders
+        this._feederCount = 0;
     }
     update(){
         this.x += this.dx;
