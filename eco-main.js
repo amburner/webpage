@@ -94,7 +94,20 @@ function loop(){
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
     newChildren.forEach(ch=>creatures.push(ch));
 
-    Object.keys(SPECIES_DEFS).forEach(k=>{ if(!creatures.some(c=>c.species===k)){ const n=k==='leviathan'?2:k==='shark'||k==='anglerfish'?1:2; for(let i=0;i<n;i++) creatures.push(spawnCreature(k)); } });
+    const RESPAWN_COUNT={jellyfish:4,manta:3,seahorse:4,shark:3,anglerfish:3,leviathan:2};
+    Object.keys(SPECIES_DEFS).forEach(k=>{
+        if(!creatures.some(c=>c.species===k)){
+            const def=SPECIES_DEFS[k];
+            const margin=80*S;
+            const n=RESPAWN_COUNT[k]??2;
+            Array.from({length:n},(_,i)=>({x:rnd(margin,i<n/2?W*0.45:W*0.55+margin),y:rnd(margin,H-margin)})).forEach(pos=>{
+                const c=spawnCreature(k,pos.x,pos.y);
+                c.age=0;
+                c.energy=160;
+                creatures.push(c);
+            });
+        }
+    });
 
     creatures.forEach(c=>drawCreature(c));
     ctx.globalAlpha=1;

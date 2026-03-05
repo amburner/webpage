@@ -150,10 +150,10 @@ let godMode={foodMult:1.0,aggrMult:1.0,mutMult:1.0};
 function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     c.age++;
     const def=SPECIES_DEFS[c.species];
+    const prevScared = c._scared; // track for post-scare wander sync
     const nightPenalty=def.activeAtNight?1.0:(0.3+0.7*dayT);
-    const drainMult=c.reproduced?1.0:0.1;
-    c.energy -= (0.22+c.size*.007)*drainMult*nightPenalty;
-    c.energy += 0.04*godMode.foodMult;
+    c.energy -= (0.08+c.size*.003)*nightPenalty;
+    c.energy += 0.06*godMode.foodMult;
     if(c.age>c.maxAge||c.energy<=0) return false;
 
     if(window._zergActive){
@@ -164,7 +164,8 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     }
 
     // OPTIMIZED: use spatial hash instead of scanning all creatures
-    const nearby=spatialHash.query(c.x,c.y,Math.max(c.sense*2, 200*S));
+    const mateSearchR = c.diet==='herb' ? c.sense*2 : c.sense*3.5;
+    const nearby=spatialHash.query(c.x,c.y,Math.max(mateSearchR, 200*S));
 
     let threatDx=0,threatDy=0,threatD=Infinity;
     let preyDx=0,preyDy=0,preyD=Infinity;
@@ -179,9 +180,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const isPrey=(c.diet==='carn'&&o.diet==='herb')||(c.diet==='apex'&&(o.diet==='herb'||o.diet==='carn'));
         const sense2prey=(c.sense*godMode.aggrMult)*(c.sense*godMode.aggrMult);
         if(isPrey&&d<sense2prey&&d<preyD){ preyDx=o.x-c.x; preyDy=o.y-c.y; preyD=d; }
-        if(c._breedCooldown<=0&&c.age>=def.minBreedAge&&o.species===c.species&&o.energy>130&&o._breedCooldown<=0){
-            const sense2mate=(c.sense*2)*(c.sense*2);
-            if(d<sense2mate&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
+        if(c._breedCooldown<=0&&c.age>=def.minBreedAge&&o.species===c.species&&o.energy>def.mateEnergyMin&&o._breedCooldown<=0){
+            // Predators get wider mate detection — they're spread out and need to find each other
+            const mateSearchR = c.diet==='herb' ? c.sense*2 : c.sense*3.5;
+            if(d<mateSearchR*mateSearchR&&d<mateD){ mateDx=o.x-c.x; mateDy=o.y-c.y; mateD=d; mateFound=o; }
         }
     });
 
@@ -191,11 +193,16 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const dx=obj.x-c.x, dy=obj.y-c.y, d2=dx*dx+dy*dy;
         const gravR=obj.grav||obj.r*4;
         if(d2<gravR*gravR&&d2<foodD){
-            // Aim for orbit at 1.5× radius, not the center
             const d=Math.sqrt(d2)||1;
-            const orbitR=obj.r*1.5;
-            const tx=c.x+dx/d*(d-orbitR), ty=c.y+dy/d*(d-orbitR);
-            foodDx=tx-c.x; foodDy=ty-c.y; foodD=d2;
+            const orbitR=obj.r*2.2;
+            if(d > orbitR){
+                // Outside orbit radius — move toward it
+                foodDx=dx/d*(d-orbitR); foodDy=dy/d*(d-orbitR);
+            } else {
+                // Inside orbit radius — move tangentially to orbit, not away
+                foodDx=-dy/d*c.speed; foodDy=dx/d*c.speed;
+            }
+            foodD=d2;
         }
     });
     foodBlooms.forEach(b=>{ const dx=b.x-c.x,dy=b.y-c.y,d=dx*dx+dy*dy; if(d<(b.r*2)*(b.r*2)&&d<foodD){foodDx=dx;foodDy=dy;foodD=d;} });
@@ -215,6 +222,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     if(c._scared>0){
         c._wanderAngle=Math.atan2(c.vy,c.vx);
     } else {
+        // First frame after scare ends — re-sync wander angle so there's no direction discontinuity
+        if(prevScared > 0){
+            c._wanderAngle=Math.atan2(c.vy,c.vx);
+        }
         const fleeWeight = clamp(0.5 - nnOut[0]*0.5, 0, 1);
         const huntWeight = clamp(0.5 + nnOut[0]*0.5, 0, 1);
         const mateWeight = clamp(0.5 + nnOut[1]*0.5, 0, 1);
@@ -243,14 +254,21 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
             }
         }
 
-        const breedRange = c.sense * 0.8; // breed when within 80% of sense radius — no need to collide
-        if(!dominated&&c._breedCooldown<=0&&c.age>=def.minBreedAge&&mateD<Infinity&&mateWeight>0.5){
+        const breedRange = c.sense * 2.5;
+        // Mate seeking: higher priority than food — always pursue if ready, no NN weight gate
+        if(!dominated&&c._breedCooldown<=0&&c.age>=def.minBreedAge&&mateD<Infinity){
             const mateDistReal = Math.sqrt(mateD);
-            if(mateDistReal > breedRange){ // still approaching — steer toward mate
+            if(mateDistReal > breedRange){
                 const d=mateDistReal||1;
-                desiredX=mateDx/d*c.speed; desiredY=mateDy/d*c.speed; dominated=true;
+                const mateSpd = c.diet==='herb' ? c.speed : c.speed * 1.2;
+                desiredX=mateDx/d*mateSpd; desiredY=mateDy/d*mateSpd; dominated=true;
+            } else {
+                // Already in breed range — orbit gently so they stay together
+                const d=mateDistReal||1;
+                desiredX=(-mateDy/d)*c.speed*0.4;
+                desiredY=(mateDx/d)*c.speed*0.4;
+                dominated=true;
             }
-            // if already in range just let them wander — breed check below handles it
         }
 
         if(!dominated&&(c.diet==='herb'||c.energy<80)){
@@ -303,7 +321,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     }
 
     if(!dominated){
-        c._wanderAngle += clamp(rnd(-.03,.03), -.025, .025);
+        c._wanderAngle += clamp(rnd(-.015,.015), -.012, .012);
 
         // Near a wall — steer wander angle back toward center
         const edgePad = 150*S;
@@ -323,11 +341,29 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         desiredY = Math.sin(c._wanderAngle) * c.speed;
     }
 
+    // When a goal dominates, commit directly — no smoothing lag causing jitter
+    // Only apply gentle smoothing during undirected wander
     if(c._scared<=0){
-        const mt = c.diet === 'herb' ? .015 : .04;
-        const smoothing = c.diet === 'herb' ? .025 : .08;
-        c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
-        c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+        if(dominated){
+            if(c.diet==='herb'){
+                // Herbs use gentle smoothing even when goal-directed — prevents orbit oscillation
+                const mt = 0.04;
+                const smoothing = 0.06;
+                c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
+                c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+            } else {
+                // Carnivores/apex commit directly — full speed toward target immediately
+                const targetSpd = Math.sqrt(desiredX*desiredX+desiredY*desiredY)||1;
+                c.vx = desiredX/targetSpd*c.speed;
+                c.vy = desiredY/targetSpd*c.speed;
+            }
+        } else {
+            // Wander only — gentle smoothing so direction changes feel organic
+            const mt = 0.06;
+            const smoothing = 0.08;
+            c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
+            c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+        }
     }
     const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
     const szPen=clamp(1-(c.size-12)*.008,.5,1);
@@ -339,20 +375,18 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     // ── SEPARATION: perpendicular nudge keeps heading intact ─────────────
     {
         const hx=c.vx, hy=c.vy, hlen=Math.sqrt(hx*hx+hy*hy)||1;
-        const hnx=hx/hlen, hny=hy/hlen;
-        const px=hny, py=-hnx; // right-perp of heading
+        const px=hy/hlen, py=-hx/hlen;
         nearby.forEach(o=>{
-            if(o===c||o._dead) return;
+            if(o===c||o._dead||o.species!==c.species) return;
             const dx=c.x-o.x, dy=c.y-o.y, dist2=dx*dx+dy*dy;
-            const minD=(c.size+o.size)*0.9;
+            const minD=(c.size+o.size)*0.5; // true body overlap only
             if(dist2>=minD*minD||dist2===0) return;
             const dist=Math.sqrt(dist2);
             const overlap=(minD-dist)/minD;
             const nx=dx/dist, ny=dy/dist;
             const perpDot=nx*px+ny*py;
-            const strength=overlap*c.speed*0.4;
-            c.vx+=px*perpDot*strength;
-            c.vy+=py*perpDot*strength;
+            c.vx+=px*perpDot*overlap*c.speed*0.3;
+            c.vy+=py*perpDot*overlap*c.speed*0.3;
         });
     }
 
