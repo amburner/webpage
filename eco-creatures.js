@@ -150,7 +150,9 @@ let godMode={foodMult:1.0,aggrMult:1.0,mutMult:1.0};
 function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     c.age++;
     const def=SPECIES_DEFS[c.species];
-    const prevScared = c._scared; // track for post-scare wander sync
+    const prevScared = c._scared;
+    const TURN_CAP={jellyfish:.022,manta:.014,seahorse:.028,shark:.009,anglerfish:.013,leviathan:.004};
+    const turnCap = TURN_CAP[c.species] ?? .015;
     const nightPenalty=def.activeAtNight?1.0:(0.3+0.7*dayT);
     c.energy -= (0.08+c.size*.003)*nightPenalty;
     c.energy += 0.06*godMode.foodMult;
@@ -230,6 +232,9 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         const huntWeight = clamp(0.5 + nnOut[0]*0.5, 0, 1);
         const mateWeight = clamp(0.5 + nnOut[1]*0.5, 0, 1);
         const foodWeight = clamp(0.5 - nnOut[1]*0.5, 0, 1);
+        const breedRange = c.sense * 2.5;
+        const wantsMate = c._breedCooldown<=0 && c.age>=def.minBreedAge;
+        const energyFull = c.energy > (c.diet==='herb' ? 160 : 115);
 
         if(c.species==='shark'){ const n=creatures.filter(x=>x.species==='shark').length; c._crowdFactor=clamp(1-(n-8)*.05,.4,1); }
         else c._crowdFactor=1;
@@ -241,7 +246,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         }
 
         if(!dominated&&preyD<Infinity&&huntWeight>0.4){
-            const hungry = def.huntHunger===null || c.energy < def.huntHunger;
+            const hungry = (def.huntHunger===null || c.energy < def.huntHunger) && !(wantsMate && mateD<Infinity);
             if(hungry){
             const d=Math.sqrt(preyDx*preyDx+preyDy*preyDy)||1;
             if(c.diet==='apex'){
@@ -254,10 +259,27 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
             }
         }
 
-        const breedRange = c.sense * 2.5;
-        // Mate seeking: higher priority than food — always pursue if ready, no NN weight gate
-        if(!dominated&&c._breedCooldown<=0&&c.age>=def.minBreedAge&&mateD<Infinity){
-            const mateDistReal = Math.sqrt(mateD);
+        // No mate found but energy is high — explore away from current heading cluster
+        if(!dominated && wantsMate && energyFull && mateD===Infinity){
+            // Find average position of same-species to move away from the crowd
+            const sameSpecies = nearby.filter(o=>!o._dead&&o.species===c.species);
+            if(sameSpecies.length > 0){
+                const avgX = sameSpecies.reduce((a,o)=>a+o.x, 0)/sameSpecies.length;
+                const avgY = sameSpecies.reduce((a,o)=>a+o.y, 0)/sameSpecies.length;
+                // Move away from cluster centroid to spread out and find isolated mates
+                const awayAngle = Math.atan2(c.y-avgY, c.x-avgX);
+                const diff = ((awayAngle-c._wanderAngle+Math.PI*3)%(Math.PI*2))-Math.PI;
+                c._wanderAngle += clamp(diff*0.015, -turnCap, turnCap);
+            } else {
+                // Truly alone — increase wander jitter to explore more aggressively
+                c._wanderAngle += clamp(rnd(-.04,.04), -turnCap*2, turnCap*2);
+            }
+            desiredX=Math.cos(c._wanderAngle)*c.speed*1.2;
+            desiredY=Math.sin(c._wanderAngle)*c.speed*1.2;
+            dominated=true;
+        }
+
+        if(!dominated && wantsMate && (energyFull || c.diet!=='herb') && mateD===Infinity){            const mateDistReal = Math.sqrt(mateD);
             if(mateDistReal > breedRange){
                 const d=mateDistReal||1;
                 const mateSpd = c.diet==='herb' ? c.speed : c.speed * 1.2;
@@ -320,10 +342,10 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         if(em){ desiredX=em.vx; desiredY=em.vy; dominated=true; }
     }
 
+    let nearWall = false;
     if(!dominated){
         c._wanderAngle += clamp(rnd(-.015,.015), -.012, .012);
 
-        // Near a wall — steer wander angle back toward center
         const edgePad = 150*S;
         let wallBias = 0;
         if(c.x < edgePad)     wallBias =  Math.PI * 0.5 * (1 - c.x / edgePad);
@@ -332,9 +354,13 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
         if(c.y > H - edgePad) wallBias -= Math.PI * 0.5 * (1 - (H - c.y) / edgePad);
 
         if(wallBias !== 0){
+            nearWall = true;
+            // Snap wander angle to face inward, proportional to how close to wall
             const target = Math.atan2(H/2 - c.y, W/2 - c.x);
             const diff = ((target - c._wanderAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
-            c._wanderAngle += diff * 0.04 * Math.abs(wallBias) / (Math.PI * 0.5);
+            // Stronger correction the closer to the wall, capped at turnCap*3
+            const strength = clamp(Math.abs(wallBias) / (Math.PI * 0.5), 0, 1);
+            c._wanderAngle += clamp(diff * 0.12 * strength, -turnCap * 3, turnCap * 3);
         }
 
         desiredX = Math.cos(c._wanderAngle) * c.speed;
@@ -344,34 +370,38 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     // When a goal dominates, commit directly — no smoothing lag causing jitter
     // Only apply gentle smoothing during undirected wander
     if(c._scared<=0){
+        const mt = turnCap;
         if(dominated){
             if(c.diet==='herb'){
-                // Herbs use gentle smoothing even when goal-directed — prevents orbit oscillation
-                const mt = 0.04;
-                const smoothing = 0.06;
-                c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
-                c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+                c.vx += clamp((desiredX - c.vx) * 0.06, -mt, mt);
+                c.vy += clamp((desiredY - c.vy) * 0.06, -mt, mt);
             } else {
-                // Carnivores/apex commit directly — full speed toward target immediately
+                // Carnivores/apex: direct commit but still capped by turnCap
                 const targetSpd = Math.sqrt(desiredX*desiredX+desiredY*desiredY)||1;
-                c.vx = desiredX/targetSpd*c.speed;
-                c.vy = desiredY/targetSpd*c.speed;
+                const tx = desiredX/targetSpd*c.speed;
+                const ty = desiredY/targetSpd*c.speed;
+                c.vx += clamp(tx - c.vx, -mt, mt);
+                c.vy += clamp(ty - c.vy, -mt, mt);
             }
         } else {
-            // Wander only — gentle smoothing so direction changes feel organic
-            const mt = 0.06;
-            const smoothing = 0.08;
-            c.vx += clamp((desiredX - c.vx) * smoothing, -mt, mt);
-            c.vy += clamp((desiredY - c.vy) * smoothing, -mt, mt);
+            c.vx += clamp((desiredX - c.vx) * 0.08, -mt, mt);
+            c.vy += clamp((desiredY - c.vy) * 0.08, -mt, mt);
         }
     }
     const spd=Math.sqrt(c.vx*c.vx+c.vy*c.vy);
     const szPen=clamp(1-(c.size-12)*.008,.5,1);
     const maxSpd=c._scared>0?c.speed*3.5:c.speed*szPen*(c._crowdFactor||1);
     if(spd>maxSpd){c.vx=c.vx/spd*maxSpd;c.vy=c.vy/spd*maxSpd;}
-    if(c._scared>0){c.vx*=.97;c.vy*=.97;}
-    if(spd<.05*Ss&&c._scared<=0){c.vx+=rnd(-.04,.04)*Ss;c.vy+=rnd(-.04,.04)*Ss;}
-
+    if(c._scared>0){
+        const tx=c.vx*.97, ty=c.vy*.97;
+        c.vx+=clamp(tx-c.vx,-turnCap,turnCap);
+        c.vy+=clamp(ty-c.vy,-turnCap,turnCap);
+    }
+    if(spd<c.speed*0.3&&c._scared<=0){
+        // Stalled — inject a nudge in the current wander direction, not random
+        c.vx += clamp(Math.cos(c._wanderAngle)*c.speed*0.15, -turnCap*3, turnCap*3);
+        c.vy += clamp(Math.sin(c._wanderAngle)*c.speed*0.15, -turnCap*3, turnCap*3);
+    }
     // ── SEPARATION: perpendicular nudge keeps heading intact ─────────────
     {
         const hx=c.vx, hy=c.vy, hlen=Math.sqrt(hx*hx+hy*hy)||1;
@@ -392,17 +422,17 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
 
     // Soft gradient boundary push
     const pad = 120*S;
-    if(c.x < pad)     c.vx += (pad - c.x) / pad * 0.3;
-    if(c.x > W - pad) c.vx -= (c.x - (W - pad)) / pad * 0.3;
-    if(c.y < pad)     c.vy += (pad - c.y) / pad * 0.3;
-    if(c.y > H - pad) c.vy -= (c.y - (H - pad)) / pad * 0.3;
+    if(c.x < pad)     c.vx += clamp((pad - c.x) / pad * 0.3, -turnCap*2, turnCap*2);
+    if(c.x > W - pad) c.vx -= clamp((c.x - (W - pad)) / pad * 0.3, -turnCap*2, turnCap*2);
+    if(c.y < pad)     c.vy += clamp((pad - c.y) / pad * 0.3, -turnCap*2, turnCap*2);
+    if(c.y > H - pad) c.vy -= clamp((c.y - (H - pad)) / pad * 0.3, -turnCap*2, turnCap*2);
 
     // Hard reflect at true edge
     const hardPad = 20*S;
-    if(c.x < hardPad)     { c.vx = Math.abs(c.vx) + 0.2*Ss; c._wanderAngle = rnd(-0.5, 0.5); }
-    if(c.x > W - hardPad) { c.vx = -(Math.abs(c.vx) + 0.2*Ss); c._wanderAngle = Math.PI + rnd(-0.5, 0.5); }
-    if(c.y < hardPad)     { c.vy = Math.abs(c.vy) + 0.2*Ss; }
-    if(c.y > H - hardPad) { c.vy = -(Math.abs(c.vy) + 0.2*Ss); }
+    if(c.x < hardPad)     { c.vx += clamp( Math.abs(c.vx)+0.2*Ss - c.vx, -turnCap*4, turnCap*4); c._wanderAngle=rnd(-0.5,0.5); }
+    if(c.x > W - hardPad) { c.vx += clamp(-(Math.abs(c.vx)+0.2*Ss) - c.vx, -turnCap*4, turnCap*4); c._wanderAngle=Math.PI+rnd(-0.5,0.5); }
+    if(c.y < hardPad)     { c.vy += clamp( Math.abs(c.vy)+0.2*Ss - c.vy, -turnCap*4, turnCap*4); }
+    if(c.y > H - hardPad) { c.vy += clamp(-(Math.abs(c.vy)+0.2*Ss) - c.vy, -turnCap*4, turnCap*4); }
 
     c.x += c.vx; c.y += c.vy;
 
@@ -416,7 +446,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns){
     const mateEnergyMin   = c.diet==='herb' ? 130 : 90;
 
     // Breed when mate is within sense range — no collision needed
-    const mateClose = mateFound && Math.sqrt(mateD) < c.sense * 0.9;
+    const mateClose = mateFound && Math.sqrt(mateD) < c.sense * 2.5;
     const mateOk    = mateClose && mateFound.energy > mateEnergyMin;
     const mature    = c.age >= def.minBreedAge;
     const cooled    = c._breedCooldown <= 0;

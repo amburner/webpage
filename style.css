@@ -316,7 +316,7 @@ body > *:not(#ecosystem-canvas):not(button):not(#eco-inspect):not(#eco-god):not(
 @media (max-width: 800px) {
     .projects-container { columns: 1; }
     .project-grid { grid-template-columns: 1fr; }
-    body { max-width: 480px; }  /* add this */
+    body { max-width: 66vw; }
 }
 @media (max-width: 600px) {
     body { padding: 10px; }
