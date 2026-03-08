@@ -15,10 +15,14 @@ function updateInspectPanel(){
     if(!creatures.includes(c)){ closeInspect(); return; }
     const def=SPECIES_DEFS[c.species], par=creatures.find(x=>x.id===c.parentId);
     // Top Q-values for current state (shows what the creature has learned to prefer)
-    const qBase = (c._qState??0) * Q_ACTIONS;
-    const qTop = Array.from({length:Q_ACTIONS},(_,a)=>({a,v:c.qTable?.[qBase+a]??0}))
-        .sort((x,y)=>y.v-x.v).slice(0,3)
-        .map(({a,v})=>`${Q_ACTION_NAMES[a].slice(0,7)}:${v.toFixed(2)}`).join(' ');
+    const nActions = c._qNActions ?? 9;
+    const actionNames = c.diet === 'herb'
+        ? ['FLEEING','FLEE-FAST','HIDING','FEEDING','GRAZING','WANDERING','SCHOOLING','FOLLOWING','WANDERING']
+        : ['FLEEING','FLEE-FAST','HIDING','HUNTING','AMBUSH','STALKING','PATROLLING','WANDERING','WANDERING'];
+    const qBase = (c._qState ?? 0) * nActions;
+    const qTop = Array.from({length: nActions}, (_, a) => ({a, v: c.qTable?.[qBase + a] ?? 0}))
+        .sort((x, y) => y.v - x.v).slice(0, 3)
+        .map(({a, v}) => `${(actionNames[a] ?? '?').slice(0, 7)}:${v.toFixed(2)}`).join(' ');
     inspectPanel.innerHTML=`
         <div style="color:${def.baseColor};font-size:13px;margin-bottom:6px">◈ ${c.species.toUpperCase()}</div>
         <div>gen: <b style="color:#ff6ec7">${c.generation}</b></div>

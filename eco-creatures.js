@@ -64,12 +64,12 @@ let generationCount = 0, creatureIdCounter = 0;
 
 const SPECIES_DEFS = {
     //          diet    colour      size       speed       sense  breed/frame  hungry@   night?   breedAge  cooldown  litter
-    jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:60,  reproduce:0.0012, huntHunger:null, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3] },
-    manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:80,  reproduce:0.0009, huntHunger:null, activeAtNight:false, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2] },
-    seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:40,  reproduce:0.0012, huntHunger:null, activeAtNight:false, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4] },
-    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.6,1.4],  sense:120, reproduce:0.0006, huntHunger:130,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2] },
-    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:100, reproduce:0.0006, huntHunger:125,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2] },
-    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.3,0.75], sense:200, reproduce:0.0002, huntHunger:155,  activeAtNight:true,  minBreedAge:1200, breedCooldown:1800, litterSize:[1,1] },
+    jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:60,  reproduce:0.0012, huntHunger:null, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], maxAge:[2500,5000]},
+    manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:80,  reproduce:0.0009, huntHunger:null, activeAtNight:false, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], maxAge:[3000,6000] },
+    seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:40,  reproduce:0.0012, huntHunger:null, activeAtNight:false, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000] },
+    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.6,1.4],  sense:120, reproduce:0.0006, huntHunger:150,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000] },
+    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:100, reproduce:0.0006, huntHunger:145,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000] },
+    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.3,0.75], sense:200, reproduce:0.0002, huntHunger:155,  activeAtNight:true,  minBreedAge:1200, breedCooldown:1800, litterSize:[1,1], maxAge:[10000,20000] },
 };
 
 let creatures = [], evoLog = [];
@@ -166,7 +166,7 @@ function spawnCreature(key, x, y, parent) {
         // ── Non-heritable state ──
         energy:        parent ? (def.diet==='herb' ? 200 : 185) : 160,
         age:           0,
-        maxAge:        rnd(2500, 6000),
+        maxAge:        rnd(def.maxAge[0], def.maxAge[1]),
         generation:    parent ? parent.generation + 1 : 0,
         parentId:      parent ? parent.id : null,
         frame:         Math.random() * Math.PI * 2,  // animation phase
@@ -322,7 +322,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
         }
         for (const s of stars) {
             const dx=s.x-c.x, dy=s.y-c.y;
-            if (Math.sqrt(dx*dx+dy*dy) < 80*S) c.energy += 0.01 * godMode.foodMult;
+            if (Math.sqrt(dx*dx+dy*dy) < 80*S) c.energy += 0.002 * godMode.foodMult;
         }
     }
 
@@ -422,7 +422,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     });
 
     if (c._scared > 0)                             c._state = 'SCARED';
-    if (c._breedCooldown > def.breedCooldown*0.95) c._state = 'REPRODUCING';
+    if (c._breedCooldown >= def.breedCooldown*0.95) c._state = 'REPRODUCING';
 
     // ── 4. VELOCITY FINALISE ─────────────────────────────────────────────────
 
