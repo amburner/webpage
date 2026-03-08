@@ -116,7 +116,6 @@ function loop(){
         const counts={}; creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
         Object.keys(SPECIES_DEFS).forEach(sp=>{ popHistory[sp].push(counts[sp]||0); if(popHistory[sp].length>POP_MAX) popHistory[sp].shift(); });
     }
-    if(frameCount%180===0) updateComplexity();
     drawHUD(); drawGraph(); updateTraitPanel();
     if(inspectedCreature) updateInspectPanel();
 }

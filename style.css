@@ -229,6 +229,12 @@ body > *:not(#ecosystem-canvas):not(button):not(#eco-inspect):not(#eco-god):not(
 .eco-btn-god   { bottom: clamp(108px, 16vh, 170px); }
 .eco-btn-graph { bottom: clamp(156px, 23vh, 242px); }
 
+.eco-btn-reset {
+    top:   clamp(8px,  1.2vh, 16px);
+    right: clamp(10px, 1.2vw, 18px);
+    left:  unset;
+}
+
 /* ── GRAPH CANVAS ───────────────────────────────────────────── */
 #eco-graph-canvas {
     position: fixed;

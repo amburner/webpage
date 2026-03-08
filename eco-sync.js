@@ -64,26 +64,34 @@ function _setStatus(msg, col='#9b7db5'){
 // ── SERIALISATION ─────────────────────────────────────────────
 // Float32Array can't go to JSON directly
 function _serialiseCreatures(creatures){
+    if(!creatures || !creatures.length) return [];
     return creatures.map(c=>({
         ...c,
-        nnWeights: Array.from(c.nnWeights),
+        qTable: c.qTable ? Array.from(c.qTable) : [],
     }));
 }
 function _deserialiseCreatures(raw){
+    if(!raw || !raw.length) return [];
     return raw.map(c=>({
         ...c,
-        nnWeights: new Float32Array(c.nnWeights),
+        qTable: new Float32Array(c.qTable || []),
         _children:     c._children     || [],
         _scared:       c._scared       ?? 0,
         _newborn:      c._newborn      ?? 0,
         _wanderAngle:  c._wanderAngle  ?? Math.random()*Math.PI*2,
         _crowdFactor:  c._crowdFactor  ?? 1,
+        _qState:       c._qState       ?? 0,
+        _qAction:      c._qAction      ?? 0,
+        _qEnergy:      c._qEnergy      ?? 160,
+        _qLock:        c._qLock        ?? 0,
+        _qHold:        c._qHold        ?? 0,
     }));
 }
 
 // ── BUILD SNAPSHOT ────────────────────────────────────────────
 function _buildSnapshot(){
     return {
+        version: 2,
         creatures:       _serialiseCreatures(window.creatures       || []),
         generationCount: window.generationCount ?? 0,
         evoLog:          window.evoLog           || [],
@@ -104,6 +112,10 @@ function _buildSnapshot(){
 // ── APPLY SNAPSHOT ────────────────────────────────────────────
 function _applySnapshot(snap){
     if(!snap) return;
+    if(!snap.version || snap.version < 2){
+        console.log('[eco-sync] stale save (v1), ignoring');
+        return;
+    }
     if(snap.creatures       != null) window.creatures       = _deserialiseCreatures(snap.creatures);
     if(snap.generationCount != null) window.generationCount = snap.generationCount;
     if(snap.evoLog          != null) window.evoLog          = snap.evoLog;
@@ -111,7 +123,6 @@ function _applySnapshot(snap){
     if(snap.dayPhase        != null) window.dayPhase        = snap.dayPhase;
     if(snap.celestials){
         if(window.stars){
-            // arrays already exist, apply directly (live sync update)
             const d = snap.celestials;
             if(d.stars)    window.stars.forEach((s,i)=>{ if(d.stars[i])    Object.assign(s,d.stars[i]); });
             if(d.planets)  window.planets.forEach((p,i)=>{ if(d.planets[i])  Object.assign(p,d.planets[i]); });
@@ -119,7 +130,6 @@ function _applySnapshot(snap){
             if(d.suns)     window.suns.forEach((s,i)=>{ if(d.suns[i])     Object.assign(s,d.suns[i]); });
             if(d.nebulas)  window.nebulas.forEach((n,i)=>{ if(d.nebulas[i])  Object.assign(n,d.nebulas[i]); });
         } else {
-            // arrays not ready yet — stash for eco-main.js to pick up
             window._pendingCelestials = snap.celestials;
         }
     }
@@ -233,27 +243,36 @@ async function initSync(){
         const snapshot = await get(ref(_db, 'ecosystem'));
         const data = snapshot.val();
 
-        if(data){
+        if(data && data.version >= 2){
             _lastSeenAt = data.pushedAt || 0;
-            _applySnapshot(data);
-            _setStatus('◎ LOADED', '#00fff5');
-            console.log('[eco-sync] loaded remote state, creatures:', window.creatures?.length);
+            const age = Date.now() - _lastSeenAt;
+            if(age < MASTER_TIMEOUT){
+                // Recent valid save — load it, stay as viewer
+                _applySnapshot(data);
+                _setStatus('◎ LOADED', '#00fff5');
+                console.log('[eco-sync] loaded remote state, creatures:', window.creatures?.length);
+            } else {
+                // Save exists but is stale — load it then claim master
+                _applySnapshot(data);
+                _isMaster = true;
+                _setStatus('◉ MASTER · RESUMED', '#ff00ff');
+                console.log('[eco-sync] stale save, resuming as master');
+                _startPushing();
+            }
         } else {
-            // No remote state — this tab becomes master immediately
+            // No valid save — start fresh as master
             _isMaster = true;
             _setStatus('◉ MASTER · NEW', '#ff00ff');
-            console.log('[eco-sync] no remote state, starting fresh as master');
+            console.log('[eco-sync] no valid save, starting fresh as master');
             _startPushing();
         }
-
-        // Decide if we're master based on how fresh the remote state is
-        _electMaster();
+        // _electMaster() removed here — master status already decided above
 
         // Start real-time listener (falls back to polling)
         await _listenRealtime();
 
         // Save on tab close
-        window.addEventListener('beforeunload', ()=>{
+        window.addEventListener('pagehide', ()=>{
             if(_isMaster) _push();
         });
 

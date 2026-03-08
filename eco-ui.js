@@ -14,7 +14,11 @@ function updateInspectPanel(){
     const c=inspectedCreature;
     if(!creatures.includes(c)){ closeInspect(); return; }
     const def=SPECIES_DEFS[c.species], par=creatures.find(x=>x.id===c.parentId);
-    const topW=Array.from(c.nnWeights).slice(0,6).map(v=>v.toFixed(2)).join(' ');
+    // Top Q-values for current state (shows what the creature has learned to prefer)
+    const qBase = (c._qState??0) * Q_ACTIONS;
+    const qTop = Array.from({length:Q_ACTIONS},(_,a)=>({a,v:c.qTable?.[qBase+a]??0}))
+        .sort((x,y)=>y.v-x.v).slice(0,3)
+        .map(({a,v})=>`${Q_ACTION_NAMES[a].slice(0,7)}:${v.toFixed(2)}`).join(' ');
     inspectPanel.innerHTML=`
         <div style="color:${def.baseColor};font-size:13px;margin-bottom:6px">◈ ${c.species.toUpperCase()}</div>
         <div>gen: <b style="color:#ff6ec7">${c.generation}</b></div>
@@ -23,8 +27,9 @@ function updateInspectPanel(){
         <div>sense: ${c.sense.toFixed(0)} | social: ${(c.socialTrait||0).toFixed(2)}</div>
         <div>age: ${c.age}/${Math.round(c.maxAge)}</div>
         <div>children: ${c._children.length} | parent: ${par?par.species:'none'}</div>
-        <div>reproduced: <b style="color:${c.reproduced?'#00fff5':'#ff6b35'}">${c.reproduced}</b></div>
-        <div style="color:#9b7db5;font-size:9px;margin-top:4px;word-break:break-all">net: ${topW}…</div>
+        <div>reproduced: <b style="color:${c.reproduced?'#00fff5':'#ff6b35'}">${c.reproduced??false}</b></div>
+        <div>action: <b style="color:#ff6ec7">${c._state}</b></div>
+        <div style="color:#9b7db5;font-size:9px;margin-top:4px;word-break:break-all">q-top: ${qTop}</div>
         <div style="color:#9b7db5;font-size:10px;margin-top:4px">right-click to close</div>`;
     inspectPanel.style.display='block';
 }
@@ -104,6 +109,7 @@ function drawHUD(){
 
 // ── BUTTONS ───────────────────────────────────────────────────────────────
 function addGodButton(){
+    let _resetBtn = null;
     const mkBtn=(label,col,cls,bottom,onClick)=>{
         const b=document.createElement('button');
         b.innerText=label; b.className='eco-btn '+cls; b.style.color=col; b.style.borderColor=col; b.style.textShadow=`0 0 8px ${col}`; b.style.boxShadow=`0 0 15px ${col}44`;
@@ -114,7 +120,26 @@ function addGodButton(){
         showGraph=!showGraph; showTraits=showGraph;
         graphCanvas.style.display=showGraph?'block':'none';
         if(traitPanel) traitPanel.style.display=showTraits?'block':'none';
+        if(_resetBtn) _resetBtn.style.display=showGraph?'none':'block';  // ADD THIS LINE
     });
+    _resetBtn = document.createElement('button');
+    _resetBtn.innerText = '♻ RESET';
+    _resetBtn.className = 'eco-btn eco-btn-reset';
+    const resetCol = '#ff6b35';
+    _resetBtn.style.color = resetCol;
+    _resetBtn.style.borderColor = resetCol;
+    _resetBtn.style.textShadow = `0 0 8px ${resetCol}`;
+    _resetBtn.style.boxShadow = `0 0 15px ${resetCol}44`;
+    _resetBtn.addEventListener('click', () => {
+        creatures.length = 0;
+        generationCount = 0;
+        evoLog.length = 0;
+        Object.keys(popHistory).forEach(k => { popHistory[k] = []; });
+        closeInspect();
+        initCreatures();
+        if(window.ecoForcePush) window.ecoForcePush();  // ADD THIS LINE
+    });
+    document.body.appendChild(_resetBtn);
     document.addEventListener('keydown',e=>{ if(e.key==='g'||e.key==='G'){ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; } });
 }
 
