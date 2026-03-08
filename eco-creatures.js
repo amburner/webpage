@@ -293,8 +293,47 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     // penalty in darkness — they can't forage efficiently. A tiny ambient gain
     // represents background cosmic energy so creatures don't starve in empty space.
     const nightMult = def.activeAtNight ? 1.0 : (0.3 + 0.7 * dayT);
-    c.energy -= (0.08 + c.size * 0.003) * nightMult;
-    c.energy += 0.06 * godMode.foodMult;
+    c.energy -= (0.04 + c.size * 0.003) * nightMult;
+
+    if (c.diet === 'herb') {
+        // Energy absorption in the glow zone around planets and suns
+        for (const obj of [...planets, ...galaxies]) {
+            const dx=obj.x-c.x, dy=obj.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+            if (d < obj.r*0.5) {
+                // Inside core — penalise hard
+                c.vx -= clamp(dx/d*c.speed*2, -turnCap*4, turnCap*4);
+                c.vy -= clamp(dy/d*c.speed*2, -turnCap*4, turnCap*4);
+                c.energy -= 1.5;
+            } else if (d < obj.r*4) {
+                if (obj._feederCount !== undefined) obj._feederCount++;
+                c.energy += 2.2 * godMode.foodMult; // feeder cap creates competition
+            }
+        }
+        for (const s of suns) {
+            const dx=s.x-c.x, dy=s.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
+            if (d < s.r*0.5) {
+                c.vx -= clamp(dx/d*c.speed*2, -turnCap*4, turnCap*4);
+                c.vy -= clamp(dy/d*c.speed*2, -turnCap*4, turnCap*4);
+                c.energy -= 1.0;
+            } else if (d < s.grav) {
+                if (s._feederCount !== undefined) s._feederCount++;
+                c.energy += (1 - d/s.grav) * 2.5 * godMode.foodMult;
+            }
+        }
+        for (const s of stars) {
+            const dx=s.x-c.x, dy=s.y-c.y;
+            if (Math.sqrt(dx*dx+dy*dy) < 80*S) c.energy += 0.01 * godMode.foodMult;
+        }
+    }
+
+    for (const b of foodBlooms) {
+        const dx=b.x-c.x, dy=b.y-c.y;
+        if (Math.sqrt(dx*dx+dy*dy) < b.r) {
+            if (b._feederCount !== undefined) b._feederCount++;
+            c.energy += 3 * godMode.foodMult;
+        }
+    }
+
     if (c.age > c.maxAge || c.energy <= 0) return false;
 
     // External chaos mode — pushes everything away from edges

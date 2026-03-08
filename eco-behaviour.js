@@ -24,8 +24,8 @@ function qInit() {
     const t = new Float32Array(Q_STATES * Q_ACTIONS);
     for (let i=0; i<t.length; i++) t[i] = (Math.random()-0.5)*0.1;
     for (let s=0; s<Q_STATES; s++) {
-        t[s * Q_ACTIONS + 9]  += 0.4;
-        t[s * Q_ACTIONS + 10] += 0.4;
+        t[s * Q_ACTIONS + 9]  += 1.2;
+        t[s * Q_ACTIONS + 10] += 1.2;
     }
     return t;
 }
@@ -59,40 +59,35 @@ function qUpdate(c, prevState, action, reward, newState) {
 
 function qReward(c, prevEnergy) {
     let r = (c.energy - prevEnergy) * 0.08;
-    if (c._scared > 0)  r -= 0.15;
-    if (c._dead)        r -= 8.0;
-    if (c._breedCooldown > 0 && c._breedCooldown > (SPECIES_DEFS[c.species]?.breedCooldown??800)*0.97) r += 12.0;
-    if ((c._qAction === 9 || c._qAction === 10) && c._matingRewardCooldown <= 0) {
-        const matingNearby = creatures.filter(o =>
-            !o._dead && o !== c && o.species === c.species &&
-            (o._qAction === 9 || o._qAction === 10) &&
-            Math.sqrt((o.x-c.x)**2 + (o.y-c.y)**2) < c.sense * 2.5
-        );
-        if (matingNearby.length > 0) { r += 4.0; c._matingRewardCooldown = 300; }
-    }
+    if (c._scared > 0) r -= 0.15;
+    if (c._dead)       r -= 8.0;
+    if (c._qJustBred)  { r += 15.0; c._qJustBred = false; }
     if (c._matingRewardCooldown > 0) c._matingRewardCooldown--;
     return r;
 }
 
+// ── HELPER ────────────────────────────────────────────────────
+// Advance _qLock without doing a Q-update — used when a hardcoded
+// override fires so the table doesn't train on forced behaviour.
+function _qSkipUpdate(c) {
+    if (c._qLock > 0) c._qLock--;
+}
+
 // ── EXTRA SPAWN FIELDS ────────────────────────────────────────
-// Called by spawnCreature to attach behaviour-specific fields.
-// Return an object — it gets spread into the creature at spawn time.
 function behaviourSpawnFields(parent) {
     return {
-        qTable:  parent ? qMutate(parent.qTable) : qInit(),
-        _qState:  0,
-        _qAction: 0,
-        _qEnergy: 160,
-        _qLock:   0,
-        _qHold:   0,
+        qTable:             parent ? qMutate(parent.qTable) : qInit(),
+        _qState:            0,
+        _qAction:           0,
+        _qEnergy:           160,
+        _qLock:             0,
+        _qHold:             0,
+        _qJustBred:         false,
         _matingRewardCooldown: 0,
     };
 }
 
 // ── DECIDE ────────────────────────────────────────────────────
-// Called once per creature per frame from updateCreature.
-// Mutates c._state and calls steerToward. Returns true if
-// a behaviour fired (dominated), false if nothing applied.
 function decide(c, e) {
     const { nearby, turnCap, wantsMate, energyFull, breedRange,
             threatDx, threatDy, threatD,
@@ -101,7 +96,47 @@ function decide(c, e) {
             foodDx,   foodDy,   foodD,
             planets,  galaxies } = e;
 
-    // State flags
+    if (!isFinite(c._qLock)) c._qLock = 0;
+
+    // ── HARDCODED OVERRIDES (run before Q-table) ──────────────
+    // These behaviours require guaranteed firing or cross-creature
+    // coordination that independent Q-table agents can't reliably produce.
+
+    // FLEE — always wins, survival beats everything
+    if (threatD < Infinity) {
+        steerToward(c, threatDx*2, threatDy*2, turnCap);
+        c._scared = Math.min(c._scared + 2, 30);
+        c._state  = 'FLEEING';
+        _qSkipUpdate(c);
+        return true;
+    }
+
+    // PURSUE MATE — fire unconditionally when a willing mate is visible.
+    // Q-table cannot coordinate two independent agents to choose mating
+    // actions simultaneously, so mating never reliably happens if left
+    // to learned policy. Hardcoding this guarantees the chase happens
+    // the moment conditions are met on THIS creature's side — the other
+    // creature's _breedCooldown and energy are checked in eco-creatures.js.
+    if (wantsMate && mateD < Infinity) {
+        const dist = Math.sqrt(mateD);
+        dist > breedRange
+            ? steerToward(c, mateDx, mateDy, turnCap)
+            : steerToward(c, -mateDy/dist * c.speed*0.4, mateDx/dist * c.speed*0.4, turnCap);
+        c._state = 'MATING';
+        _qSkipUpdate(c);
+        return true;
+    }
+
+    // SEEK MATE — spread out to find one when ready but none visible.
+    // Also hardcoded: if we left this to the Q-table, well-fed creatures
+    // would just keep feeding because that reliably gains energy, and
+    // seeking gives no immediate reward signal.
+    if (wantsMate && (energyFull || c.diet !== 'herb')) {
+        c._wanderAngle += clamp(rnd(-0.04, 0.04), -turnCap*2, turnCap*2);
+    }
+    // ── END OVERRIDES ─────────────────────────────────────────
+
+    // State flags for Q-table
     const stFlee   = threatD < Infinity ? 1 : 0;
     const stPrey   = preyD   < Infinity ? 1 : 0;
     const stMate   = mateD   < Infinity ? 1 : 0;
@@ -116,18 +151,18 @@ function decide(c, e) {
 
     // Action selection
     if (c._qLock <= 0) {
-        const epsilon = Math.max(0.05, 0.5 - c.generation * 0.006);
+        const epsilon = Math.max(0.12, 0.6 - c.generation * 0.004);
         const action  = qChoose(c, qState, epsilon);
         c._qState  = qState;
         c._qAction = action;
         const topVal     = c.qTable[qState * Q_ACTIONS + action];
         const confidence = clamp((topVal + 1) / 2, 0, 1);
-        c._qLock = 20 + Math.floor(confidence * 80);
+        c._qLock = 10 + Math.floor(confidence * 30);
     } else {
         c._qLock--;
     }
 
-    // Execute — identical switch to before, just moved here
+    // Execute
     switch (c._qAction) {
         case 0:
             if (threatD < Infinity) { steerToward(c, threatDx*2, threatDy*2, turnCap); c._scared=Math.min(c._scared+2,30); c._state='FLEEING'; return true; }
@@ -143,7 +178,7 @@ function decide(c, e) {
             break;
         case 3:
             if (preyD < Infinity) {
-                const hungry = (SPECIES_DEFS[c.species].huntHunger===null || c.energy<SPECIES_DEFS[c.species].huntHunger) && !(wantsMate&&mateD<Infinity);
+                const hungry = (SPECIES_DEFS[c.species].huntHunger===null || c.energy<SPECIES_DEFS[c.species].huntHunger);
                 if (hungry) {
                     steerToward(c, preyDx, preyDy, turnCap); c._state='HUNTING';
                     for (const p of nearby) {
@@ -194,24 +229,8 @@ function decide(c, e) {
             steerToward(c,Math.cos(c._wanderAngle)*c.speed,Math.sin(c._wanderAngle)*c.speed,turnCap);
             c._state='WANDERING'; return true;
         case 9:
-            if (wantsMate && (energyFull||c.diet!=='herb') && mateD===Infinity) {
-                const kin=nearby.filter(o=>!o._dead&&o.species===c.species);
-                if (kin.length>0) {
-                    const ax=kin.reduce((a,o)=>a+o.x,0)/kin.length, ay=kin.reduce((a,o)=>a+o.y,0)/kin.length;
-                    const awayAngle=Math.atan2(c.y-ay,c.x-ax);
-                    const diff=((awayAngle-c._wanderAngle+Math.PI*3)%(Math.PI*2))-Math.PI;
-                    c._wanderAngle+=clamp(diff*0.015,-turnCap,turnCap);
-                } else { c._wanderAngle+=clamp(rnd(-0.04,0.04),-turnCap*2,turnCap*2); }
-                steerToward(c,Math.cos(c._wanderAngle)*c.speed*1.2,Math.sin(c._wanderAngle)*c.speed*1.2,turnCap);
-                c._state='SEEKING MATE'; return true;
-            }
-            break;
         case 10:
-            if (wantsMate && mateD<Infinity) {
-                const dist=Math.sqrt(mateD);
-                dist>breedRange ? steerToward(c,mateDx,mateDy,turnCap) : steerToward(c,-mateDy/dist*c.speed*0.4,mateDx/dist*c.speed*0.4,turnCap);
-                c._state='MATING'; return true;
-            }
+            // Mating is handled by hardcoded override above — fall through to wander
             break;
         case 11:
             { const kin=nearby.filter(o=>!o._dead&&o.species===c.species&&o!==c);
@@ -245,8 +264,6 @@ function decide(c, e) {
 }
 
 // ── PUBLIC INTERFACE ──────────────────────────────────────────
-// This is the only thing eco-creatures.js talks to.
-// To swap systems, replace this file and keep the same interface.
 const behaviourSystem = {
     decide,
     spawnFields: behaviourSpawnFields,
