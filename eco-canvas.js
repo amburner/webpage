@@ -383,22 +383,21 @@ class Comet {
         ctx.globalAlpha=1; ctx.restore();
     }
 }
-
 // OPTIMIZED: Nebula draws to a provided context (so it can go into the BG cache)
 // Purple/blue palette, multi-lobe feathered edges, rare warm accent
 // Each nebula pre-bakes itself to a small offscreen canvas on reset — drawTo is a single drawImage
 const NEBULA_COLS=[
-  ['#3300aa','#6600cc'],['#220066','#4400ff'],['#0022bb','#0055ff'],
-  ['#440088','#9900cc'],['#001166','#0033cc'],['#550099','#aa00ff'],
-  ['#cc2200','#ff6600'],['#ff4400','#ff8800'],
-  ['#990044','#ff0077'],['#cc0066','#880055'],
-  ['#882200','#ff4422'],['#660033','#ff2255'],
+  ['#5500dd','#8800ff'],['#3300aa','#6600ff'],['#0044dd','#0077ff'],
+  ['#6600bb','#cc00ff'],['#0033aa','#0055ff'],['#7700cc','#dd00ff'],
+  ['#ff3300','#ff8800'],['#ff6600','#ffaa00'],
+  ['#cc0066','#ff0099'],['#ff0088','#bb0077'],
+  ['#bb3300','#ff6644'],['#990055','#ff3377'],
 ];
 class Nebula {
     constructor(){ this._bc=document.createElement('canvas'); this._bctx=this._bc.getContext('2d'); this.reset(true); }
     reset(init){
         this.x=rnd(0,W||1200); this.y=rnd(0,H||800);
-        this.r=rnd(130,340)*S;
+        this.r=rnd(150,380)*S;
         const warm=Math.random()<0.17;
         const pool=warm?NEBULA_COLS.slice(8):NEBULA_COLS.slice(0,8);
         const [c1,c2]=pick(pool);
@@ -408,7 +407,7 @@ class Nebula {
         this.lobes=Array.from({length:Math.floor(rnd(3,6))},()=>({
             ox:rnd(-.4,.4), oy:rnd(-.4,.4),
             sx:rnd(.6,1.3),  sy:rnd(.5,1.0),
-            a:rnd(.035,.08), r:rnd(.5,.9),
+            a:rnd(.08,.16), r:rnd(.5,.9),
         }));
         this._bake();
     }
@@ -426,18 +425,18 @@ class Nebula {
             // Feathered outer halo
             const gOut = gc.createRadialGradient(0, 0, lr * .25, 0, 0, lr * 1.2);
             gOut.addColorStop(0,   this.col2 + '00');
-            gOut.addColorStop(.5,  this.col2 + '14');
+            gOut.addColorStop(.5,  this.col2 + '3a');
             gOut.addColorStop(1,   this.col2 + '00');
-            gc.globalAlpha=l.a*.7;
+            gc.globalAlpha=l.a*1.2;
             gc.fillStyle=gOut;
             gc.beginPath(); gc.arc(0,0,lr*1.2,0,Math.PI*2); gc.fill();
             // Main lobe — hard-feathers to transparent
             const g = gc.createRadialGradient(0, 0, 0, 0, 0, lr);
-            g.addColorStop(0,   this.col + '4a');
-            g.addColorStop(.35, this.col2 + '38');
-            g.addColorStop(.7,  this.col + '1a');
+            g.addColorStop(0,   this.col + '88');
+            g.addColorStop(.35, this.col2 + '66');
+            g.addColorStop(.7,  this.col + '3a');
             g.addColorStop(1,   this.col + '00');
-            gc.globalAlpha=l.a;
+            gc.globalAlpha=l.a*1.4;
             gc.fillStyle=g;
             gc.beginPath(); gc.arc(0,0,lr,0,Math.PI*2); gc.fill();
             gc.restore();

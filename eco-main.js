@@ -5,11 +5,11 @@
 
 // ── INIT & LOOP ───────────────────────────────────────────────────────────
 const stars  =Array.from({length:90}, ()=>new Star());
-const planets=Array.from({length:5},  ()=>new Planet());
-const galaxies=Array.from({length:2}, ()=>new Galaxy());
-const suns   =Array.from({length:4},  ()=>new Sun());
+const planets=Array.from({length:8},  ()=>new Planet());
+const galaxies=Array.from({length:4}, ()=>new Galaxy());
+const suns   =Array.from({length:6},  ()=>new Sun());
 const comets =Array.from({length:3},  ()=>new Comet());
-const nebulas=Array.from({length:8},  ()=>new Nebula());
+const nebulas=Array.from({length:10},  ()=>new Nebula());
 
 window.addEventListener('load', async ()=>{
     resize();
@@ -94,7 +94,7 @@ function loop(){
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
     newChildren.forEach(ch=>creatures.push(ch));
 
-    const RESPAWN_COUNT={jellyfish:4,manta:3,seahorse:4,shark:3,anglerfish:3,leviathan:2};
+    const RESPAWN_COUNT={jellyfish:8,manta:8,seahorse:8,shark:4,anglerfish:4,leviathan:3};
     Object.keys(SPECIES_DEFS).forEach(k=>{
         if(!creatures.some(c=>c.species===k)){
             const def=SPECIES_DEFS[k];

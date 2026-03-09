@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ECO TUNER</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:       #07080a;
+    --panel:    #0d0f12;
+    --border:   #1c2028;
+    --accent:   #00e5ff;
+    --warn:     #ff6b35;
+    --good:     #39ff14;
+    --dim:      #3a4050;
+    --text:     #c8cdd8;
+    --mono:     'DM Mono', monospace;
+    --display:  'Bebas Neue', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: 56px 1fr;
+    grid-template-columns: 320px 1fr;
+    grid-template-areas: "hd hd" "ctrl results";
+  }
+
+  /* ── HEADER ── */
+  header {
+    grid-area: hd;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+    background: var(--panel);
+  }
+  header h1 {
+    font-family: var(--display);
+    font-size: 28px;
+    letter-spacing: 4px;
+    color: var(--accent);
+  }
+  header .sub {
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .run-btn {
+    margin-left: auto;
+    background: none;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 8px 24px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+  }
+  .run-btn:hover { background: var(--accent); color: var(--bg); }
+  .run-btn:disabled { border-color: var(--dim); color: var(--dim); cursor: default; background: none; }
+  .stop-btn {
+    background: none;
+    border: 1px solid var(--warn);
+    color: var(--warn);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 2px;
+    padding: 8px 24px;
+    cursor: pointer;
+    display: none;
+  }
+  .stop-btn:hover { background: var(--warn); color: var(--bg); }
+
+  /* ── CONTROLS ── */
+  #ctrl {
+    grid-area: ctrl;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .section-title {
+    font-family: var(--display);
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 6px;
+    margin-bottom: 10px;
+  }
+  .param-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+  .param-label { color: var(--text); font-size: 11px; }
+  .param-row input[type=number] {
+    width: 62px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 6px;
+    text-align: right;
+  }
+  .param-row input[type=number]:focus { outline: none; border-color: var(--accent); }
+  .param-row .unit { color: var(--dim); font-size: 10px; width: 28px; text-align: left; }
+
+  .range-row {
+    display: grid;
+    grid-template-columns: 1fr auto 8px auto auto;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .range-row .param-label { font-size: 11px; }
+  .range-row input[type=number] {
+    width: 56px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 5px;
+    text-align: right;
+  }
+  .range-sep { color: var(--dim); font-size: 10px; text-align: center; }
+  .range-row .unit { color: var(--dim); font-size: 10px; }
+
+  .sweep-note {
+    font-size: 10px;
+    color: var(--dim);
+    line-height: 1.5;
+    padding: 8px;
+    border: 1px solid var(--border);
+    background: #0a0c0f;
+  }
+  .sweep-note span { color: var(--accent); }
+
+  #totalRuns {
+    font-family: var(--display);
+    font-size: 22px;
+    color: var(--warn);
+    letter-spacing: 2px;
+  }
+
+  /* ── RESULTS ── */
+  #results {
+    grid-area: results;
+    overflow-y: auto;
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  #progress-bar-wrap {
+    display: none;
+    flex-direction: column;
+    gap: 6px;
+  }
+  #progress-bar-wrap.active { display: flex; }
+  #progress-track {
+    height: 2px;
+    background: var(--border);
+    width: 100%;
+  }
+  #progress-fill {
+    height: 2px;
+    background: var(--accent);
+    width: 0%;
+    transition: width 0.2s;
+  }
+  #progress-label { font-size: 11px; color: var(--dim); }
+
+  #result-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 12px;
+  }
+
+  .result-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 14px;
+    position: relative;
+    animation: fadeIn 0.3s ease;
+  }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(4px); } to { opacity:1; transform:none; } }
+
+  .result-card.rank-1 { border-color: var(--good); }
+  .result-card.rank-2 { border-color: var(--accent); }
+  .result-card.rank-3 { border-color: #aa88ff; }
+
+  .card-rank {
+    font-family: var(--display);
+    font-size: 32px;
+    position: absolute;
+    top: 10px;
+    right: 14px;
+    opacity: 0.15;
+  }
+  .rank-1 .card-rank { color: var(--good); opacity: 0.3; }
+
+  .card-score {
+    font-family: var(--display);
+    font-size: 20px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+  .rank-1 .card-score { color: var(--good); }
+  .rank-2 .card-score { color: var(--accent); }
+  .rank-3 .card-score { color: #aa88ff; }
+  .card-score span { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: 6px; letter-spacing: 0; }
+
+  .card-metrics {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 16px;
+    margin-bottom: 10px;
+  }
+  .metric { font-size: 10px; }
+  .metric .k { color: var(--dim); }
+  .metric .v { color: var(--text); }
+  .metric .v.good { color: var(--good); }
+  .metric .v.warn { color: var(--warn); }
+
+  .card-sparks {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 10px;
+    height: 32px;
+    align-items: flex-end;
+  }
+  .spark-bar {
+    flex: 1;
+    background: var(--dim);
+    min-height: 2px;
+    transition: background 0.2s;
+  }
+  .spark-bar.herb  { background: #dd88ff88; }
+  .spark-bar.carn  { background: #cc00ff88; }
+  .spark-bar.apex  { background: #ff6b3588; }
+
+  .card-params {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .param-tag {
+    font-size: 9px;
+    padding: 2px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--dim);
+    letter-spacing: 0.5px;
+  }
+  .param-tag.changed { border-color: var(--accent); color: var(--accent); }
+
+  .apply-btn {
+    margin-top: 10px;
+    width: 100%;
+    background: none;
+    border: 1px solid var(--dim);
+    color: var(--dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 5px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .apply-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  .empty-state {
+    color: var(--dim);
+    font-size: 11px;
+    letter-spacing: 1px;
+    line-height: 2;
+    padding: 40px 0;
+  }
+  .empty-state .big {
+    font-family: var(--display);
+    font-size: 48px;
+    letter-spacing: 4px;
+    color: var(--border);
+    display: block;
+    margin-bottom: 12px;
+  }
+
+  #copied-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 8px 16px;
+    letter-spacing: 1px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  #copied-toast.show { opacity: 1; }
+
+  .sweep-chk {
+    appearance: none; width: 12px; height: 12px;
+    border: 1px solid var(--dim); background: var(--bg); cursor: pointer;
+    position: relative; flex-shrink: 0;
+  }
+  .sweep-chk:checked { border-color: var(--accent); background: var(--accent); }
+  .sweep-chk:checked::after {
+    content: ''; position: absolute; top: 1px; left: 3px;
+    width: 4px; height: 7px; border: 2px solid var(--bg);
+    border-top: none; border-left: none; transform: rotate(45deg);
+  }
+  /* dims max input when sweep is off */
+  .prow.sweep-off .prow-max, .prow.sweep-off .sep { opacity: .25; pointer-events: none; }
+  .prow {
+    display: grid;
+    grid-template-columns: 14px 1fr 56px 8px 56px 28px;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 8px;
+  }
+  .prow input[type=number] {
+    background: var(--bg); border: 1px solid var(--border);
+    color: var(--text); font-family: var(--mono); font-size: 11px;
+    padding: 3px 5px; text-align: right; width: 100%;
+  }
+  .prow.sweep-off .prow-max,
+  .prow.sweep-off .range-sep { opacity: .25; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>ECO TUNER</h1>
+  <div class="sub">HEADLESS PARAMETER SWEEP — COSMIC ECOSYSTEM</div>
+  <button class="run-btn" id="runBtn" onclick="startSweep()">▶ RUN SWEEP</button>
+  <button class="stop-btn" id="stopBtn" onclick="stopSweep()">■ STOP</button>
+</header>
+
+<div id="ctrl">
+
+  <div>
+    <div class="section-title">SIMULATION</div>
+    <div class="param-row">
+      <span class="param-label">frames per run</span>
+      <input type="number" id="simFrames" value="8000" step="1000">
+      <span class="unit">fr</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">runs per config</span>
+      <input type="number" id="runsPerConfig" value="2" min="1" max="5">
+      <span class="unit">×</span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">pop cap</span>
+      <input type="number" id="popCap" value="60" step="5">
+      <span class="unit"></span>
+    </div>
+    <div class="param-row">
+      <span class="param-label">sweep steps</span>
+      <input type="number" id="sweepSteps" value="3" min="2" max="5">
+      <span class="unit">pts</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">ENERGY — sweep ranges</div>
+    <div class="sweep-note">Each range is sampled at <span>3 points</span>. Leave min=max to fix a value.</div>
+    <br>
+    <div class="prow" id="prow-drain">
+      <input type="checkbox" class="sweep-chk" id="sw-drain" checked onchange="toggleSweep('drain')">
+      <span class="param-label">base drain</span>
+      <input type="number" id="drain-min" value="0.03" step="0.01">
+      <span class="range-sep">–</span>
+      <input type="number" id="drain-max" value="0.07" step="0.01" class="prow-max">
+      <span class="unit">/fr</span>
+    </div>
+    <div class="prow" id="prow-ambient">
+      <input type="checkbox" class="sweep-chk" id="sw-ambient" checked onchange="toggleSweep('ambient')">
+      <span class="param-label">ambient gain</span>
+      <input type="number" id="ambient-min" value="0.03" step="0.01">
+      <span class="range-sep">–</span>
+      <input type="number" id="ambient-max" value="0.08" step="0.01" class="prow-max">
+      <span class="unit">/fr</span>
+    </div>
+    <div class="prow" id="prow-sizeCost">
+      <input type="checkbox" class="sweep-chk" id="sw-sizeCost" onchange="toggleSweep('sizeCost')">
+      <span class="param-label">size cost ×</span>
+      <input type="number" id="sizeCost-min" value="0.002" step="0.001">
+      <span class="range-sep">–</span>
+      <input type="number" id="sizeCost-max" value="0.005" step="0.001" class="prow-max">
+      <span class="unit"></span>
+    </div>
+    <div class="prow" id="prow-herbBT">
+      <input type="checkbox" class="sweep-chk" id="sw-herbBT" checked onchange="toggleSweep('herbBT')">
+      <span class="param-label">herb breed @</span>
+      <input type="number" id="herbBT-min" value="150" step="10">
+      <span class="range-sep">–</span>
+      <input type="number" id="herbBT-max" value="180" step="10" class="prow-max">
+      <span class="unit">nrg</span>
+    </div>
+    <div class="prow" id="prow-carnBT">
+      <input type="checkbox" class="sweep-chk" id="sw-carnBT" checked onchange="toggleSweep('carnBT')">
+      <span class="param-label">carn breed @</span>
+      <input type="number" id="carnBT-min" value="110" step="10">
+      <span class="range-sep">–</span>
+      <input type="number" id="carnBT-max" value="140" step="10" class="prow-max">
+      <span class="unit">nrg</span>
+    </div>
+    <div class="prow" id="prow-foodGain">
+      <input type="checkbox" class="sweep-chk" id="sw-foodGain" checked onchange="toggleSweep('foodGain')">
+      <span class="param-label">food gain/tick</span>
+      <input type="number" id="foodGain-min" value="1.2" step="0.2">
+      <span class="range-sep">–</span>
+      <input type="number" id="foodGain-max" value="2.4" step="0.2" class="prow-max">
+      <span class="unit">nrg</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">REPRODUCTION</div>
+    <div class="prow" id="prow-herbRepro">
+      <input type="checkbox" class="sweep-chk" id="sw-herbRepro" onchange="toggleSweep('herbRepro')">
+      <span class="param-label">herb repro rate</span>
+      <input type="number" id="herbRepro-min" value="0.0008" step="0.0002">
+      <span class="range-sep">–</span>
+      <input type="number" id="herbRepro-max" value="0.0016" step="0.0002" class="prow-max">
+      <span class="unit"></span>
+    </div>
+    <div class="prow" id="prow-carnRepro">
+      <input type="checkbox" class="sweep-chk" id="sw-carnRepro" onchange="toggleSweep('carnRepro')">
+      <span class="param-label">carn repro rate</span>
+      <input type="number" id="carnRepro-min" value="0.0003" step="0.0001">
+      <span class="range-sep">–</span>
+      <input type="number" id="carnRepro-max" value="0.0009" step="0.0001" class="prow-max">
+      <span class="unit"></span>
+    </div>
+    <div class="prow" id="prow-density">
+      <input type="checkbox" class="sweep-chk" id="sw-density" onchange="toggleSweep('density')">
+      <span class="param-label">density cutoff</span>
+      <input type="number" id="density-min" value="0.3" step="0.05">
+      <span class="range-sep">–</span>
+      <input type="number" id="density-max" value="0.5" step="0.05" class="prow-max">
+      <span class="unit">frac</span>
+    </div>
+    <div class="prow" id="prow-mateR">
+      <input type="checkbox" class="sweep-chk" id="sw-mateR" checked onchange="toggleSweep('mateR')">
+      <span class="param-label">mate search r×</span>
+      <input type="number" id="mateR-min" value="3" step="0.5">
+      <span class="range-sep">–</span>
+      <input type="number" id="mateR-max" value="8" step="0.5" class="prow-max">
+      <span class="unit">×s</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">PREDATION</div>
+    <div class="prow" id="prow-killMult">
+      <input type="checkbox" class="sweep-chk" id="sw-killMult" checked onchange="toggleSweep('killMult')">
+      <span class="param-label">kill energy</span>
+      <input type="number" id="killMult-min" value="4" step="1">
+      <span class="range-sep">–</span>
+      <input type="number" id="killMult-max" value="8" step="1" class="prow-max">
+      <span class="unit">×sz</span>
+    </div>
+    <div class="prow" id="prow-huntThresh">
+      <input type="checkbox" class="sweep-chk" id="sw-huntThresh" onchange="toggleSweep('huntThresh')">
+      <span class="param-label">hunt hunger @</span>
+      <input type="number" id="huntThresh-min" value="110" step="10">
+      <span class="range-sep">–</span>
+      <input type="number" id="huntThresh-max" value="160" step="10" class="prow-max">
+      <span class="unit">nrg</span>
+    </div>
+    <div class="prow" id="prow-killR">
+      <input type="checkbox" class="sweep-chk" id="sw-killR" checked onchange="toggleSweep('killR')">
+      <span class="param-label">kill range</span>
+      <input type="number" id="killR-min" value="0.025" step="0.005">
+      <span class="range-sep">–</span>
+      <input type="number" id="killR-max" value="0.055" step="0.005" class="prow-max">
+      <span class="unit">u</span>
+    </div>
+    <div class="prow" id="prow-carnSense">
+      <input type="checkbox" class="sweep-chk" id="sw-carnSense" checked onchange="toggleSweep('carnSense')">
+      <span class="param-label">carn sense r</span>
+      <input type="number" id="carnSense-min" value="0.14" step="0.03">
+      <span class="range-sep">–</span>
+      <input type="number" id="carnSense-max" value="0.32" step="0.03" class="prow-max">
+      <span class="unit">u</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="section-title">KILL MOTIVATION</div>
+    <div class="sweep-note">Post-kill window where carnivores seek mates at a <span>lower energy threshold</span>.</div>
+    <br>
+    <div class="prow" id="prow-killMotivF">
+      <input type="checkbox" class="sweep-chk" id="sw-killMotivF" checked onchange="toggleSweep('killMotivF')">
+      <span class="param-label">window frames</span>
+      <input type="number" id="killMotivF-min" value="60" step="30">
+      <span class="range-sep">–</span>
+      <input type="number" id="killMotivF-max" value="240" step="30" class="prow-max">
+      <span class="unit">fr</span>
+    </div>
+    <div class="prow" id="prow-killMotivM">
+      <input type="checkbox" class="sweep-chk" id="sw-killMotivM" checked onchange="toggleSweep('killMotivM')">
+      <span class="param-label">thresh mult</span>
+      <input type="number" id="killMotivM-min" value="0.6" step="0.1">
+      <span class="range-sep">–</span>
+      <input type="number" id="killMotivM-max" value="0.9" step="0.1" class="prow-max">
+      <span class="unit">×</span>
+    </div>
+  </div>
+
+  <div>
+    <div id="totalRuns">—</div>
+    <div style="color:var(--dim);font-size:10px;margin-top:4px">configurations × runs</div>
+  </div>
+
+</div>
+
+<div id="results">
+  <div class="empty-state" id="emptyState">
+    <span class="big">READY</span>
+    Configure ranges on the left, then run the sweep.<br>
+    Each config is scored on <b style="color:var(--text)">longevity</b>, <b style="color:var(--text)">species diversity</b>,<br>
+    and <b style="color:var(--text)">population oscillation</b> (boom/bust = bad).
+  </div>
+  <div id="progress-bar-wrap">
+    <div id="progress-track"><div id="progress-fill"></div></div>
+    <div id="progress-label">—</div>
+  </div>
+  <div id="result-grid"></div>
+</div>
+
+<div id="copied-toast">COPIED TO CLIPBOARD</div>
+
+<script>
+// ─── HEADLESS SIM ──────────────────────────────────────────────────────────
+// A stripped-down version of the ecosystem that runs purely on numbers —
+// no canvas, no DOM. Just energy, positions, and the reproduction check.
+// Positions are on a 1×1 unit square to keep things simple.
+
+function rnd(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+const SPECIES = [
+  { key:'jellyfish', diet:'herb', count:6,  reproduce:0.0012, breedCooldown:400,  minBreedAge:300,  litterSize:[1,3] },
+  { key:'manta',     diet:'herb', count:6,  reproduce:0.0009, breedCooldown:500,  minBreedAge:400,  litterSize:[1,2] },
+  { key:'seahorse',  diet:'herb', count:8,  reproduce:0.0012, breedCooldown:350,  minBreedAge:250,  litterSize:[2,4] },
+  { key:'shark',     diet:'carn', count:4,  reproduce:0.0006, breedCooldown:900,  minBreedAge:700,  litterSize:[1,2] },
+  { key:'anglerfish',diet:'carn', count:4,  reproduce:0.0006, breedCooldown:800,  minBreedAge:600,  litterSize:[1,2] },
+  { key:'leviathan', diet:'apex', count:2,  reproduce:0.0002, breedCooldown:1800, minBreedAge:1200, litterSize:[1,1] },
+];
+
+const FOOD_SOURCES = 4; // simulated planets
+
+function runSim(cfg, frames) {
+  let idCtr = 0;
+  let creatures = [];
+
+  for (const sp of SPECIES) {
+    for (let i = 0; i < sp.count; i++) {
+      creatures.push({
+        id: idCtr++,
+        species: sp.key,
+        diet: sp.diet,
+        x: Math.random(), y: Math.random(),
+        vx: rnd(-0.003, 0.003), vy: rnd(-0.003, 0.003),
+        size: sp.diet === 'apex' ? 60 : sp.diet === 'carn' ? 22 : 12,
+        speed: sp.diet === 'apex' ? 0.004 : sp.diet === 'carn' ? 0.007 : 0.005,
+        sense: sp.diet === 'apex' ? cfg.carnSense * 1.6 : sp.diet === 'carn' ? cfg.carnSense : 0.06,
+        reproduce: sp.reproduce,
+        energy: sp.diet === 'carn' || sp.diet === 'apex' ? 100 : 160,
+        age: 0,
+        maxAge: rnd(2500, 6000),
+        _breedCooldown: 0,
+        _recentKill: 0,
+        _dead: false,
+      });
+    }
+  }
+
+  const foods = Array.from({length: FOOD_SOURCES}, () => ({
+    x: rnd(0.1, 0.9), y: rnd(0.1, 0.9), r: 0.06
+  }));
+
+  const snapshots = [];
+  let totalBirths = 0, totalDeaths = 0, extinctions = new Set();
+  let lastExtinctionFrame = 0;
+
+  for (let f = 0; f < frames; f++) {
+    const newChildren = [];
+
+    // ── precompute census once per frame ──────────────────────────────────
+    const aliveAll = creatures.filter(x => !x._dead);
+    const aliveCount = aliveAll.length;
+    const speciesCount = {};
+    for (const c of aliveAll) speciesCount[c.species] = (speciesCount[c.species] || 0) + 1;
+
+    for (const c of creatures) {
+      if (c._dead) continue;
+      c.age++;
+
+      // Energy
+      c.energy -= (cfg.baseDrain + c.size * cfg.sizeCost);
+      c.energy += cfg.ambient;
+
+      // Herbs: seek nearest food source
+      if (c.diet === 'herb') {
+        let bestD = Infinity, bx = 0, by = 0;
+        for (const f2 of foods) {
+          const dx = f2.x - c.x, dy = f2.y - c.y, d = Math.sqrt(dx*dx+dy*dy);
+          if (d < bestD) { bestD = d; bx = dx; by = dy; }
+        }
+        if (bestD < c.sense * 2) {
+          const mag = Math.sqrt(bx*bx+by*by) || 1;
+          c.vx += (bx/mag*c.speed - c.vx) * 0.12;
+          c.vy += (by/mag*c.speed - c.vy) * 0.12;
+          if (bestD < 0.07) c.energy += cfg.foodGain;
+        } else {
+          // Wander at full speed when no food in range
+          if (!c._wanderAngle || Math.random() < 0.02) c._wanderAngle = Math.random() * Math.PI * 2;
+          c.vx += (Math.cos(c._wanderAngle) * c.speed - c.vx) * 0.08;
+          c.vy += (Math.sin(c._wanderAngle) * c.speed - c.vy) * 0.08;
+        }
+      }
+
+      // Carns/apex: seek and kill prey
+      if (c.diet === 'carn' || c.diet === 'apex') {
+        let bestD = Infinity, target = null;
+        for (const o of creatures) {
+          if (o._dead || o === c) continue;
+          const isPrey = (c.diet==='carn' && o.diet==='herb') ||
+                         (c.diet==='apex' && (o.diet==='herb' || o.diet==='carn'));
+          if (!isPrey) continue;
+          const dx=o.x-c.x, dy=o.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
+          if (d < c.sense && d < bestD) { bestD=d; target=o; }
+        }
+        if (target) {
+          const dx=target.x-c.x, dy=target.y-c.y, mag=Math.sqrt(dx*dx+dy*dy) || 1;
+          c.vx += (dx/mag*c.speed - c.vx) * 0.12;
+          c.vy += (dy/mag*c.speed - c.vy) * 0.12;
+          if (bestD < cfg.killR) {
+            c.energy += target.size * cfg.killMult * (1 + c.size*0.02);
+            target._dead = true;
+            totalDeaths++;
+            c._recentKill = cfg.killMotivationFrames;
+          }
+        } else {
+          // Patrol at full speed when no prey in range — avoids clustering at spawn
+          if (!c._wanderAngle || Math.random() < 0.015) c._wanderAngle = Math.random() * Math.PI * 2;
+          c.vx += (Math.cos(c._wanderAngle) * c.speed - c.vx) * 0.08;
+          c.vy += (Math.sin(c._wanderAngle) * c.speed - c.vy) * 0.08;
+        }
+      }
+
+      // Clamp speed + move
+      const spd = Math.sqrt(c.vx*c.vx + c.vy*c.vy);
+      if (spd > c.speed) { c.vx=c.vx/spd*c.speed; c.vy=c.vy/spd*c.speed; }
+      c.x = clamp(c.x + c.vx, 0, 1);
+      c.y = clamp(c.y + c.vy, 0, 1);
+
+      if (c.age > c.maxAge || c.energy <= 0) { c._dead = true; totalDeaths++; continue; }
+
+      if (c._recentKill > 0) c._recentKill--;
+      if (c._breedCooldown > 0) c._breedCooldown--;
+
+      // Reproduction
+      const sp = SPECIES.find(s => s.key === c.species);
+      const baseThresh = c.diet === 'herb' ? cfg.herbBreedThresh : cfg.carnBreedThresh;
+      const energyThresh = (c._recentKill > 0 && c.diet !== 'herb')
+        ? baseThresh * cfg.killMotivationThreshMult
+        : baseThresh;
+
+      const speciesFrac = (speciesCount[c.species] || 0) / (aliveCount || 1);
+      const densityOk = speciesFrac <= cfg.densityCutoff;
+
+      const canBreed = c.age >= sp.minBreedAge
+        && c._breedCooldown <= 0
+        && c.energy > energyThresh
+        && densityOk;
+
+      if (canBreed) {
+        let mateFound = null;
+        for (const o of creatures) {
+          if (o._dead || o===c || o.species!==c.species || o._breedCooldown>0) continue;
+          const dx=o.x-c.x, dy=o.y-c.y, d=Math.sqrt(dx*dx+dy*dy);
+          if (d < c.sense * cfg.mateR && o.energy > energyThresh * 0.7) { mateFound=o; break; }
+        }
+        if (mateFound && Math.random() < c.reproduce && aliveCount < cfg.popCap) {
+          const [litMin, litMax] = sp.litterSize;
+          const litter = litMin + Math.floor(Math.random() * (litMax - litMin + 1));
+          c.energy *= Math.max(0.35, 1 - litter*0.15);
+          mateFound.energy *= Math.max(0.40, 1 - litter*0.12);
+          c._breedCooldown = sp.breedCooldown;
+          mateFound._breedCooldown = sp.breedCooldown;
+          for (let li=0; li<litter; li++) {
+            newChildren.push({
+              id: idCtr++,
+              species: c.species, diet: c.diet,
+              x: c.x+rnd(-0.02,0.02), y: c.y+rnd(-0.02,0.02),
+              vx: rnd(-0.002,0.002), vy: rnd(-0.002,0.002),
+              size: c.size, speed: c.speed, sense: c.sense,
+              reproduce: clamp(c.reproduce + rnd(-0.0001,0.0001), 0.00003, 0.0015),
+              energy: c.diet==='herb' ? 160 : 100,
+              age: 0, maxAge: rnd(2500,6000), _breedCooldown: 0, _recentKill: 0, _dead: false,
+            });
+            totalBirths++;
+          }
+        }
+      }
+    }
+
+    creatures = creatures.filter(x => !x._dead).concat(newChildren);
+
+    if (f % 200 === 0) {
+      const alive = creatures.filter(x => !x._dead);
+      const snap = { f, total: alive.length, herb:0, carn:0, apex:0 };
+      for (const c of alive) snap[c.diet]++;
+      snapshots.push(snap);
+
+      for (const sp of SPECIES) {
+        if (!extinctions.has(sp.key) && alive.filter(x=>x.species===sp.key).length === 0) {
+          extinctions.add(sp.key);
+          lastExtinctionFrame = f;
+        }
+      }
+    }
+
+    if (creatures.length === 0) break;
+  }
+
+  return { snapshots, extinctions: [...extinctions], lastExtinctionFrame, totalBirths, totalDeaths, finalPop: creatures.length };
+}
+
+// ─── SCORING ───────────────────────────────────────────────────────────────
+function score(result, frames) {
+  const { snapshots, extinctions, lastExtinctionFrame, finalPop } = result;
+  if (snapshots.length < 3) return 0;
+
+  // Longevity: did all three diet types survive to the end?
+  const lastSnap = snapshots[snapshots.length-1];
+  const dietsSurvived = (lastSnap.herb>0?1:0)+(lastSnap.carn>0?1:0)+(lastSnap.apex>0?1:0);
+  const longevityScore = (dietsSurvived / 3) * 40;
+
+  // Diversity: species count at end
+  // Approximate from final snapshot diet ratios — fuller sim would track per-species
+  const diversityScore = (extinctions.length === 0 ? 20 : Math.max(0, 20 - extinctions.length*5));
+
+  // Oscillation: good oscillation = variance in total pop, bad = crash to 0
+  const pops = snapshots.map(s=>s.total);
+  const mean = pops.reduce((a,b)=>a+b,0)/pops.length;
+  const variance = pops.reduce((a,b)=>a+(b-mean)**2,0)/pops.length;
+  const cv = mean > 0 ? Math.sqrt(variance)/mean : 0; // coefficient of variation
+  // Sweet spot: CV around 0.3-0.5 = healthy oscillation. <0.1 = stagnant. >0.8 = crash.
+  const oscScore = cv < 0.05 ? 5 : cv < 0.15 ? 15 : cv < 0.5 ? 25 : cv < 0.8 ? 15 : 5;
+
+  // Stability: penalise late extinctions
+  const stabilityScore = lastExtinctionFrame > frames*0.7 ? -10 :
+                         lastExtinctionFrame > frames*0.4 ? -5 : 0;
+
+  return Math.max(0, longevityScore + diversityScore + oscScore + stabilityScore);
+}
+
+// ─── SWEEP LOGIC ───────────────────────────────────────────────────────────
+let sweepRunning = false, sweepStop = false;
+
+function linspace(min, max, n) {
+  if (n === 1 || min === max) return [min];
+  const step = (max-min)/(n-1);
+  return Array.from({length:n}, (_,i) => +(min+i*step).toPrecision(4));
+}
+
+function getVals(key) {
+  const swept = document.getElementById('sw-' + key)?.checked ?? false;
+  const n   = swept ? +document.getElementById('sweepSteps').value : 1;
+  const min = +document.getElementById(key + '-min').value;
+  const max = swept ? +document.getElementById(key + '-max').value : min;
+  return linspace(min, max, n);
+}
+
+function buildConfigs() {
+  const PARAMS = [
+    ['drain',      'baseDrain'],
+    ['ambient',    'ambient'],
+    ['sizeCost',   'sizeCost'],
+    ['herbBT',     'herbBreedThresh'],
+    ['carnBT',     'carnBreedThresh'],
+    ['foodGain',   'foodGain'],
+    ['herbRepro',  'herbReproRate'],
+    ['carnRepro',  'carnReproRate'],
+    ['density',    'densityCutoff'],
+    ['mateR',      'mateR'],
+    ['killMult',   'killMult'],
+    ['huntThresh', 'huntThresh'],
+    ['killR',      'killR'],
+    ['carnSense',  'carnSense'],
+    ['killMotivF', 'killMotivationFrames'],
+    ['killMotivM', 'killMotivationThreshMult'],
+  ];
+
+  const arrays = PARAMS.map(([key]) => getVals(key));
+  const configs = [];
+
+  function rec(i, cur) {
+    if (i === arrays.length) {
+      configs.push({ ...cur, popCap: +document.getElementById('popCap').value });
+      return;
+    }
+    for (const v of arrays[i]) rec(i + 1, { ...cur, [PARAMS[i][1]]: v });
+  }
+  rec(0, {});
+  //console.log(configs)
+  return configs;
+}
+
+function toggleSweep(key) {
+  const chk = document.getElementById('sw-'+key);
+  document.getElementById('prow-'+key).classList.toggle('sweep-off', !chk.checked);
+  updateTotalRuns();
+}
+
+function updateTotalRuns() {
+  const configs = buildConfigs();
+  const runs = configs.length * +document.getElementById('runsPerConfig').value;
+  document.getElementById('totalRuns').textContent = runs + ' runs';
+}
+
+// Wire up live count
+document.querySelectorAll('input').forEach(el => el.addEventListener('input', updateTotalRuns));
+updateTotalRuns();
+
+async function startSweep() {
+  sweepStop = false;
+  sweepRunning = true;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('stopBtn').style.display = 'inline-block';
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('result-grid').innerHTML = '';
+  document.getElementById('progress-bar-wrap').classList.add('active');
+
+  const configs = buildConfigs();
+  const runsPerConfig = +document.getElementById('runsPerConfig').value;
+  const frames = +document.getElementById('simFrames').value;
+  const total = configs.length * runsPerConfig;
+  let done = 0;
+
+  const results = [];
+
+  for (const cfg of configs) {
+    if (sweepStop) break;
+
+    let totalScore = 0;
+    let combinedSnapshots = null;
+    let combinedExtinctions = new Set();
+    let combinedBirths = 0, combinedDeaths = 0, combinedFinal = 0;
+
+    for (let r = 0; r < runsPerConfig; r++) {
+      if (sweepStop) break;
+
+      // Yield to browser between sims
+      await new Promise(res => setTimeout(res, 0));
+
+      const result = runSim(cfg, frames);
+      totalScore += score(result, frames);
+      combinedBirths += result.totalBirths;
+      combinedDeaths += result.totalDeaths;
+      combinedFinal  += result.finalPop;
+      result.extinctions.forEach(e => combinedExtinctions.add(e));
+
+      if (!combinedSnapshots) {
+        combinedSnapshots = result.snapshots;
+      } else {
+        // Average snapshot totals across runs
+        combinedSnapshots = combinedSnapshots.map((s,i) => ({
+          ...s,
+          total: Math.round((s.total + (result.snapshots[i]?.total??0))/2),
+          herb:  Math.round((s.herb  + (result.snapshots[i]?.herb??0))/2),
+          carn:  Math.round((s.carn  + (result.snapshots[i]?.carn??0))/2),
+          apex:  Math.round((s.apex  + (result.snapshots[i]?.apex??0))/2),
+        }));
+      }
+
+      done++;
+      const pct = (done/total*100).toFixed(0);
+      document.getElementById('progress-fill').style.width = pct+'%';
+      document.getElementById('progress-label').textContent = `${done} / ${total} runs — config ${configs.indexOf(cfg)+1}/${configs.length}`;
+    }
+
+    results.push({
+      cfg,
+      avgScore: totalScore / runsPerConfig,
+      snapshots: combinedSnapshots || [],
+      extinctions: [...combinedExtinctions],
+      births: combinedBirths,
+      deaths: combinedDeaths,
+      finalPop: Math.round(combinedFinal / runsPerConfig),
+    });
+  }
+
+  // Sort by score
+  results.sort((a,b) => b.avgScore - a.avgScore);
+  renderResults(results, configs[0]);
+
+  sweepRunning = false;
+  document.getElementById('runBtn').disabled = false;
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('progress-label').textContent = `Complete — ${results.length} configs evaluated`;
+}
+
+function stopSweep() {
+  sweepStop = true;
+}
+
+// ─── RENDER ────────────────────────────────────────────────────────────────
+const DEFAULTS = {
+  baseDrain:0.04, ambient:0.06, sizeCost:0.003, herbBreedThresh:170,
+  carnBreedThresh:130, foodGain:25, herbReproRate:100, carnReproRate:140,
+  densityCutoff:0.4, mateR:5, killMult:6, huntThresh:130, 
+  killR:0.035, carnSense:0.22, killMotivationFrames:120, killMotivationThreshMult:0.75
+};
+
+function renderResults(results, firstCfg) {
+  const grid = document.getElementById('result-grid');
+  grid.innerHTML = '';
+
+  results.slice(0, 24).forEach((r, i) => {
+    const rankClass = i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+    const lastSnap = r.snapshots[r.snapshots.length-1] || {herb:0,carn:0,apex:0,total:0};
+    const maxPop = Math.max(...r.snapshots.map(s=>s.total), 1);
+
+    // Sparkline bars
+    const bars = r.snapshots.slice(-20).map(s => `
+      <div class="spark-bar herb" style="height:${Math.round(s.herb/maxPop*30)+2}px" title="herb ${s.herb}"></div>
+      <div class="spark-bar carn" style="height:${Math.round(s.carn/maxPop*30)+2}px" title="carn ${s.carn}"></div>
+      <div class="spark-bar apex" style="height:${Math.round(s.apex/maxPop*30)+2}px" title="apex ${s.apex}"></div>
+    `).join('');
+
+    // Param tags — highlight changed ones
+    const tags = Object.entries(r.cfg).filter(([k])=>k!=='popCap').map(([k,v]) => {
+      const changed = DEFAULTS[k] !== undefined && Math.abs(DEFAULTS[k]-v)/Math.max(DEFAULTS[k],0.0001) > 0.05;
+      return `<span class="param-tag ${changed?'changed':''}">${k.replace(/([A-Z])/g,' $1').toLowerCase()}=${typeof v==='number'&&v<0.01?v.toExponential(1):v}</span>`;
+    }).join('');
+
+    const herbOk = lastSnap.herb > 0 ? 'good' : 'warn';
+    const carnOk = lastSnap.carn > 0 ? 'good' : 'warn';
+    const apexOk = lastSnap.apex > 0 ? 'good' : 'warn';
+
+    const card = document.createElement('div');
+    card.className = `result-card ${rankClass}`;
+    card.innerHTML = `
+      <div class="card-rank">#${i+1}</div>
+      <div class="card-score">${r.avgScore.toFixed(1)}<span>/ 85 pts</span></div>
+      <div class="card-metrics">
+        <div class="metric"><span class="k">herb final </span><span class="v ${herbOk}">${lastSnap.herb}</span></div>
+        <div class="metric"><span class="k">carn final </span><span class="v ${carnOk}">${lastSnap.carn}</span></div>
+        <div class="metric"><span class="k">apex final </span><span class="v ${apexOk}">${lastSnap.apex}</span></div>
+        <div class="metric"><span class="k">extinctions </span><span class="v ${r.extinctions.length>0?'warn':'good'}">${r.extinctions.length}</span></div>
+        <div class="metric"><span class="k">births </span><span class="v">${r.births}</span></div>
+        <div class="metric"><span class="k">deaths </span><span class="v">${r.deaths}</span></div>
+      </div>
+      <div class="card-sparks">${bars}</div>
+      <div class="card-params">${tags}</div>
+      <button class="apply-btn" onclick="copyConfig(${i})">COPY CONFIG TO CLIPBOARD</button>
+    `;
+    grid.appendChild(card);
+  });
+
+  // Store for copy
+  window._lastResults = results;
+}
+
+
+
+function copyConfig(i) {
+  const r = window._lastResults[i];
+  const cfg = r.cfg;
+  const lines = [
+    `// ECO TUNER result #${i+1} — score ${r.avgScore.toFixed(1)}`,
+    `// Paste these values into eco-creatures.js`,
+    ``,
+    `// ── ENERGY ──────────────────────────────────────────────`,
+    `// In updateCreature energy section:`,
+    `c.energy -= (${cfg.baseDrain} + c.size * ${cfg.sizeCost}) * nightMult;`,
+    `c.energy += ${cfg.ambient} * godMode.foodMult;`,
+    ``,
+    `// Food gain per tick (on food tile):`,
+    `c.energy += ${cfg.foodGain};`,
+    ``,
+    `// ── REPRODUCTION ────────────────────────────────────────`,
+    `// Breed thresholds:`,
+    `const energyThresh = c.diet==='herb' ? ${cfg.herbBreedThresh} : (c._recentKill > 0 ? ${(cfg.carnBreedThresh * cfg.killMotivationThreshMult).toFixed(0)} : ${cfg.carnBreedThresh});`,
+    `// Repro rates (herb / carn):`,
+    `const reproRate = c.diet==='herb' ? ${cfg.herbReproRate} : ${cfg.carnReproRate};`,
+    `// Density cutoff:`,
+    `const densityPenalty = speciesFrac > ${cfg.densityCutoff} ? 0.4 : 1.0;`,
+    `// Mate search radius multiplier:`,
+    `const mateSearchRadius = c.size * ${cfg.mateSearchRadius};`,
+    ``,
+    `// ── PREDATION ───────────────────────────────────────────`,
+    `// Kill energy gain:`,
+    `c.energy += p.size * ${cfg.killMult} * (1 + c.size*0.02);`,
+    `// Hunt hunger threshold:`,
+    `const hungerThresh = ${cfg.huntThresh};`,
+    `// Kill range:`,
+    `const killRange = ${cfg.killRange};`,
+    `// Carnivore sense radius:`,
+    `const carnSenseRadius = ${cfg.carnSenseRadius};`,
+    ``,
+    `// ── KILL MOTIVATION ─────────────────────────────────────`,
+    `// Post-kill window + threshold multiplier:`,
+    `c._recentKill = ${cfg.killMotivationFrames};`,
+    `// (thresh mult ${cfg.killMotivationThreshMult} already applied to carnBreedThresh above)`,
+    ``,
+    `// In spawnCreature non-heritable state section:`,
+    `_recentKill: 0,`,
+    ``,
+    `// Near top of updateCreature (after age++):`,
+    `if (c._recentKill > 0) c._recentKill--;`,
+  ].join('\n');
+
+  navigator.clipboard.writeText(lines).then(() => {
+    const toast = document.getElementById('copied-toast');
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  });
+}
+</script>
+
+</body>
+</html>

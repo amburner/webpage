@@ -41,7 +41,7 @@ class SpatialHash {
         return out;
     }
 }
-const spatialHash = new SpatialHash(120);
+const spatialHash = new SpatialHash(240);
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -67,7 +67,7 @@ const SPECIES_DEFS = {
     jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:60,  reproduce:0.0012, huntHunger:null, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], maxAge:[2500,5000]},
     manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:80,  reproduce:0.0009, huntHunger:null, activeAtNight:false, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], maxAge:[3000,6000] },
     seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:40,  reproduce:0.0012, huntHunger:null, activeAtNight:false, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000] },
-    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.6,1.4],  sense:120, reproduce:0.0006, huntHunger:150,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000] },
+    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0006, huntHunger:150,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000] },
     anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:100, reproduce:0.0006, huntHunger:145,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000] },
     leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.3,0.75], sense:200, reproduce:0.0002, huntHunger:155,  activeAtNight:true,  minBreedAge:1200, breedCooldown:1800, litterSize:[1,1], maxAge:[10000,20000] },
 };
@@ -187,7 +187,7 @@ function spawnCreature(key, x, y, parent) {
 
 function initCreatures() {
     Object.keys(SPECIES_DEFS).forEach(k => {
-        const n = k==='leviathan' ? 2 : k==='shark'||k==='anglerfish' ? 15 : k==='seahorse' ? 8 : 6;
+        const n = k==='leviathan' ? 2 : k==='shark'||k==='anglerfish' ? 4 : k==='seahorse' ? 20 : 20;
         for (let i=0; i<n; i++) creatures.push(spawnCreature(k));
     });
 }
