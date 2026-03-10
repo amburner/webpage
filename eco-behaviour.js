@@ -76,7 +76,7 @@ function doWander(c, turnCap) {
             c._levyTimer = 0;
             
             // Choose distant target (power-law distribution)
-            const jumpDist = Math.pow(Math.random(), -0.5) * c.sense * 3;  // Lévy distribution
+            const jumpDist = Math.pow(Math.random(), -0.5) * Math.max(W, H) * 0.3;
             const jumpAngle = Math.random() * Math.PI * 2;
             
             c._levyTarget = {

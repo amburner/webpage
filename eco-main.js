@@ -115,7 +115,7 @@ function loop(){
             if (creatures.length + n <= POP_CAP) {
                 // Spawn in scattered positions
                 Array.from({length: n}, (_, i) => ({
-                    x: rnd(margin, i < n/2 ? W*0.45 : W*0.55 + margin),
+                    x: rnd(i < n/2 ? margin : W*0.55, i < n/2 ? W*0.45 : W - margin),
                     y: rnd(margin, H - margin)
                 })).forEach(pos => {
                     const c = spawnCreature(k, pos.x, pos.y);

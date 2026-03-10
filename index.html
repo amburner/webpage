@@ -32,7 +32,7 @@
     <a href="images/Amber Miller 2025 Resume.pdf">
         <button style="width:100%; margin:4px 0; background:#ccffcc; cursor: pointer;">Resume</button>
     </a>
-    <a href="mailto:a100miller@gmail.com">
+    <a href="/cdn-cgi/l/email-protection#accd9d9c9cc1c5c0c0c9deeccbc1cdc5c082cfc3c1">
         <img src="images/email_me.gif" style="width:100%; margin-top:8px;">
     </a>
   </div>
@@ -57,6 +57,94 @@
 
 <h2 style="text-align: center; font-size: 48px;">Projects</h2>
 <div class="projects-container">
+
+
+  <!-- PROJECT 5 -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Semi-Automatic Cat Toy Robot</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <p style="font-size:24px;"><strong>Construction + Prototype + "Final Product"</strong></p>
+        <div>
+          <img src="catBot/prototype_front.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/prototype_back.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/internals.jpg" style="width:49%; display:inline-block;">
+          <img src="catBot/DemoPic.png" style="width:49%; display:inline-block;">
+        </div>
+        <p style="font-size:24px;"><strong>Demo Video</strong></p>
+        <video controls height="600px"">
+          <source src="catBot/DemoVideo.mp4" type="video/mp4">
+          Your Browser Does Not Support Video
+        </video>
+        <p><a href="https://github.com/amburner/CatBot">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:18px;">Motivation:</p>
+        <p>The current market for cat toys contains very few options for a toy 
+          which both serves live video and allows the user to remotely play with their cat using a laser pointer.
+          Among these devices, it is typical for the video feed to have a 1500-2000 ms delay due to network latency, 
+          video encoding, decoding, and compression, and slow webhosting. Additionally, such devices typically cost upwards of $100
+          and can require a subscription service to access the video feed. The features on these devices are also very limited.
+          As such, I set out to create a low-cost semi-automatic cat toy robot that could stream live video with minimal latency
+          and allow for remote laser pointer play with my cat, but also enable custom features such as customizable laser patterns, including
+          a modular random trajectory generator, the ability to record and playback laser trajectories, and record and save video, enabling
+          the cat toy to double as a security camera.
+        </p>
+        <p style="font-size:16px;">Project Overview</p>
+        <ul>
+          <li>Built a semi-automatic cat toy robot with pan-tilt laser targeting controlled via a web interface</li>
+          <li>Developed low-latency MJPEG streaming from a Raspberry Pi camera, with live video flip and zoom controls</li>
+          <li>Implemented servo motion control with adjustable speed, angle limits, and smooth movement interpolation</li>
+          <li>Added random walk and manual targeting modes for interactive play, with recording and replay functionality</li>
+          <li>Integrated lidar sensing for distance measurement and real-time telemetry over WebSocket</li>
+          <li>Created a full-stack Python + Flask + WebSocket system with authentication, user management, and persistent configuration</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">Autonomous Systems</div>
+          <div class="tag">Quadrotor Drone</div>
+          <div class="tag">Dynamical Systems</div>
+          <div class="tag">Controls</div>`1`
+        </div>
+      </div>
+    </div>
+  </details>
+
+<!-- PROJECT: COSMIC ECOSYSTEM -->
+  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Cosmic Ecosystem — Live Ecology Simulation</summary><div>
+    <div class="project-grid">
+      <div style="text-align:center">
+        <img src="ecosystem_fit.png" alt="Ecosystem population dynamics and phase space analysis" style="border:0px; width:100%;"/>
+        <p><a href="cosmic_ecosystem_report.pdf">Full Report</a></p>
+        <p><a href="https://github.com/amburner/webpage/tree/main">GitHub Repository</a></p>
+      </div>
+      <div>
+        <p style="font-size:18px;">Overview:</p>
+        <p>A real-time browser ecosystem simulation where six species across four trophic levels
+          hunt, breed, and die inside a procedurally-generated cosmic canvas. Each creature runs
+          its own drive hierarchy and moves independently every frame. Multi-tab sync is handled
+          via Firebase Realtime Database. Population dynamics were modeled with an extended
+          Lotka–Volterra ODE system and validated against live simulation data.</p>
+        <p style="font-size:16px;">Key Features</p>
+        <ul>
+          <li>Six species (jellyfish, manta, seahorse, shark, anglerfish, leviathan) with heritable traits, Q-tables, and Lévy-flight wandering</li>
+          <li>Procedural cosmic background: 90 stars, 8 planets, 6 suns, 4 galaxies, comets, nebulae, and a day/night cycle driving food bloom spawns</li>
+          <li>Firebase Realtime Database sync — multiple browser tabs share one live simulation with automatic master election and offline fallback</li>
+          <li>Priority-ordered drive hierarchy per creature: flee > hunt/feed > seek mate > wander, with spiral mate-search and contact-range kill checks</li>
+          <li>God Mode panel for live parameter tuning: food multiplier, predator aggression, mutation rate, day speed</li>
+          <li>Extended Lotka–Volterra formulation with spatial encounter saturation, energy-gated reproduction, and circadian forcing — linearized stability analysis predicts ~300 s oscillation period, confirmed by FFT of simulation data</li>
+          <li>"Chaos UI" easter egg: mouse-trail sparkle effects, cycling neon headers, and a Zerg Rush mini-game where zerglings attack the portfolio cards</li>
+        </ul>
+        <div style="text-align:center">
+          <div class="tag">JavaScript</div>
+          <div class="tag">Firebase</div>
+          <div class="tag">Simulation</div>
+          <div class="tag">Lotka–Volterra</div>
+          <div class="tag">Dynamical Systems</div>
+          <div class="tag">Ecology</div>
+        </div>
+      </div>
+    </div>
+  </details>  
+
   <!-- PROJECT 1 -->
   <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">AIAA 2024-2025 Undergraduate Team Aircraft Design</summary><div>
     <div class="project-grid">
@@ -175,55 +263,6 @@
     </div>
   </details>
 
-  <!-- PROJECT 5 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Semi-Automatic Cat Toy Robot</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <p style="font-size:24px;"><strong>Construction + Prototype + "Final Product"</strong></p>
-        <div>
-          <img src="catBot/prototype_front.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/prototype_back.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/internals.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/DemoPic.png" style="width:49%; display:inline-block;">
-        </div>
-        <p style="font-size:24px;"><strong>Demo Video</strong></p>
-        <video controls height="600px"">
-          <source src="catBot/DemoVideo.mp4" type="video/mp4">
-          Your Browser Does Not Support Video
-        </video>
-        <p><a href="https://github.com/amburner/CatBot">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:18px;">Motivation:</p>
-        <p>The current market for cat toys contains very few options for a toy 
-          which both serves live video and allows the user to remotely play with their cat using a laser pointer.
-          Among these devices, it is typical for the video feed to have a 1500-2000 ms delay due to network latency, 
-          video encoding, decoding, and compression, and slow webhosting. Additionally, such devices typically cost upwards of $100
-          and can require a subscription service to access the video feed. The features on these devices are also very limited.
-          As such, I set out to create a low-cost semi-automatic cat toy robot that could stream live video with minimal latency
-          and allow for remote laser pointer play with my cat, but also enable custom features such as customizable laser patterns, including
-          a modular random trajectory generator, the ability to record and playback laser trajectories, and record and save video, enabling
-          the cat toy to double as a security camera.
-        </p>
-        <p style="font-size:16px;">Project Overview</p>
-        <ul>
-          <li>Built a semi-automatic cat toy robot with pan-tilt laser targeting controlled via a web interface</li>
-          <li>Developed low-latency MJPEG streaming from a Raspberry Pi camera, with live video flip and zoom controls</li>
-          <li>Implemented servo motion control with adjustable speed, angle limits, and smooth movement interpolation</li>
-          <li>Added random walk and manual targeting modes for interactive play, with recording and replay functionality</li>
-          <li>Integrated lidar sensing for distance measurement and real-time telemetry over WebSocket</li>
-          <li>Created a full-stack Python + Flask + WebSocket system with authentication, user management, and persistent configuration</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">Autonomous Systems</div>
-          <div class="tag">Quadrotor Drone</div>
-          <div class="tag">Dynamical Systems</div>
-          <div class="tag">Controls</div>`1`
-        </div>
-      </div>
-    </div>
-  </details>
-
   <!-- PROJECT 4 -->
   <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Custom Software For Expedited Calculation of Fluid Volumes in Piping Systems</summary><div>
     <div class="project-grid">
@@ -271,8 +310,7 @@
   <p>© Amber Miller</p>
   <img src="images/rotating_aircraft.gif" alt="Rotating aircraft" style="margin-top:10px;margin-bottom:20px;margin-left:-5px;" />
   <img src="images/robot_arm.gif" alt="Robot arm" style="margin-top:10px;margin-bottom:20px" />
-  <img src="images/rocket_ship.gif" alt="Rock ship" style="margin-top:10px; margin-bottom:20px; margin-right:20px;" />
+  <img src="images/rocket_ship.gif" alt="Rock ship" style="margin-top:10px;margin-bottom:20px;margin-left:-5px;" />
 </footer>
-
 </body>
 </html>
