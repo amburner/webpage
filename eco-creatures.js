@@ -64,8 +64,8 @@ let traitHistory = {};
 // REMOVED: const POP_CAP = 60;  // No more hard population ceiling!
 
 let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
-const POP_MAX = 120;
-const POP_CAP = 120;
+const POP_MAX = 60;
+const POP_CAP = 60;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TURN CAPS
