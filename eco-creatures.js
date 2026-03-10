@@ -51,9 +51,9 @@ const SPECIES_DEFS = {
     jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:80,  reproduce:0.0009, hunger:80, seekMate:120, mateMin: 80, mateR: 2.5*80, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], maxAge:[2500,5000], spawnEnergy:80, maxEnergy:200},
     manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:90,  reproduce:0.0009, hunger:90, seekMate:120, mateMin: 80, mateR: 2.5*90, activeAtNight:true, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], maxAge:[3000,6000], spawnEnergy:80, maxEnergy:200},
     seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:70,  reproduce:0.0009, hunger:70, seekMate:120, mateMin: 80, mateR: 2.5*70, activeAtNight:true, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000], spawnEnergy:80, maxEnergy:200},
-    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0006, hunger:80, seekMate:200, mateMin: 100, mateR: 3.5*120,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000], spawnEnergy:160, maxEnergy:300},  // 200→300
-    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:150, reproduce:0.0006, hunger:80, seekMate:160, mateMin: 100, mateR: 3.5*150,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000], spawnEnergy:160, maxEnergy:300},  // 200→300
-    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[1.0,1.6], sense:200, reproduce:0.0002, hunger:150, seekMate:250, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,15000], spawnEnergy:200, maxEnergy:500},  // 200→500
+    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0012, hunger:80, seekMate:200, mateMin: 100, mateR: 3.5*120,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000], spawnEnergy:160, maxEnergy:300},  // 200→300
+    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:150, reproduce:0.0012, hunger:80, seekMate:160, mateMin: 100, mateR: 3.5*150,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000], spawnEnergy:160, maxEnergy:300},  // 200→300
+    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[1.0,1.6], sense:200, reproduce:0.0012, hunger:150, seekMate:250, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,15000], spawnEnergy:200, maxEnergy:500},  // 200→500
 };
 
 let creatures = [], evoLog = [];
@@ -247,7 +247,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
         c.energy -= (0.045 + c.size * 0.001) * nightMult;
     }
     else {
-        c.energy -= (0.045 + c.size * 0.004) * nightMult;
+        c.energy -= (0.045 + c.size * 0.002) * nightMult;
     }
 
     if (c.diet === 'herb') {
