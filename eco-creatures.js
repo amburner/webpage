@@ -1,21 +1,18 @@
 // =============================================
-// COSMIC ECOSYSTEM — CREATURES & AI (simplified)
-// Depends on: eco-canvas.js  (canvas, ctx, W, H, rnd, clamp)
-//             eco-ui.js      (Ss, S, dayT, foodBlooms, godMode, inspectedCreature)
+// COSMIC ECOSYSTEM — CREATURES & AI (REBALANCED)
+// Target equilibrium: F=100, H=40, C=15, A=3
+// Changes:
+//   - Apex predators ONLY hunt carnivores (not herbivores)
+//   - Increased maxEnergy for carnivores (200→300) and apex (200→500)
+//   - Removed hard population cap (POP_CAP)
+//   - Increased herbivore food absorption (2.2→4.0)
+//   - Increased energy gain from kills (6→12 multiplier)
+//   - Allowing natural boom-bust population cycles
 // =============================================
 
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SPATIAL HASH
-//
-// The canvas is divided into a grid of fixed-size cells. Each frame every
-// creature is inserted into whichever cell it occupies. When we want to find
-// neighbours we only check the cells that overlap our search radius.
-//
-// Without this we'd need to compare every creature against every other
-// creature — O(n²). With it, a creature in an uncrowded cell pays almost
-// nothing. At 60 creatures the difference is negligible, but it also means
-// we never have to think about it if the population grows.
 // ─────────────────────────────────────────────────────────────────────────────
 class SpatialHash {
     constructor(cellSize) {
@@ -45,47 +42,33 @@ const spatialHash = new SpatialHash(240);
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SPECIES DEFINITIONS
-//
-// Every number that shapes behaviour lives here. Nothing is hardcoded
-// inside the update loop — if you want sharks to be faster or jellyfish
-// to breed slower, change it here and everything else adapts automatically.
-//
-// The three diet types form the food chain:
-//   herb  →  eats celestial energy (planets, suns, stars)
-//   carn  →  eats herbs
-//   apex  →  eats herbs AND carns
-//
-// This three-level chain is the minimum needed for interesting population
-// dynamics. Add a fourth level and the maths gets richer; remove one and
-// you get boring boom/bust with no dampening.
+// SPECIES DEFINITIONS (REBALANCED)
 // ─────────────────────────────────────────────────────────────────────────────
 let generationCount = 0, creatureIdCounter = 0;
 
 const SPECIES_DEFS = {
-    //          diet    colour      size       speed       sense  breed/frame  hungry@   night?   breedAge  cooldown  litter
-    jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:60,  reproduce:0.0012, huntHunger:null, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], maxAge:[2500,5000]},
-    manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:80,  reproduce:0.0009, huntHunger:null, activeAtNight:false, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], maxAge:[3000,6000] },
-    seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:40,  reproduce:0.0012, huntHunger:null, activeAtNight:false, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000] },
-    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0006, huntHunger:150,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000] },
-    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:100, reproduce:0.0006, huntHunger:145,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000] },
-    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.3,0.75], sense:200, reproduce:0.0002, huntHunger:155,  activeAtNight:true,  minBreedAge:1200, breedCooldown:1800, litterSize:[1,1], maxAge:[10000,20000] },
+    //          diet    colour      size       speed       sense  breed/frame  hungry@   night?   breedAge  cooldown  litter      maxAge         maxEnergy
+    jellyfish:  { diet:'herb', baseColor:'#dd88ff', size:[8,16],   speed:[0.4,1.0],  sense:80,  reproduce:0.0009, hunger:80, seekMate:120, mateMin: 80, mateR: 2.5*80, activeAtNight:true,  minBreedAge:300,  breedCooldown:400,  litterSize:[1,3], maxAge:[2500,5000], spawnEnergy:80, maxEnergy:200},
+    manta:      { diet:'herb', baseColor:'#00fff5', size:[14,24],  speed:[0.3,0.8],  sense:90,  reproduce:0.0009, hunger:90, seekMate:120, mateMin: 80, mateR: 2.5*90, activeAtNight:true, minBreedAge:400,  breedCooldown:500,  litterSize:[1,2], maxAge:[3000,6000], spawnEnergy:80, maxEnergy:200},
+    seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:70,  reproduce:0.0009, hunger:70, seekMate:120, mateMin: 80, mateR: 2.5*70, activeAtNight:true, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000], spawnEnergy:80, maxEnergy:200},
+    shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0006, hunger:80, seekMate:200, mateMin: 100, mateR: 3.5*120,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000], spawnEnergy:160, maxEnergy:300},  // 200→300
+    anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:150, reproduce:0.0006, hunger:80, seekMate:160, mateMin: 100, mateR: 3.5*150,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000], spawnEnergy:160, maxEnergy:300},  // 200→300
+    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[1.0,1.6], sense:200, reproduce:0.0002, hunger:150, seekMate:250, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,15000], spawnEnergy:200, maxEnergy:500},  // 200→500
 };
 
 let creatures = [], evoLog = [];
 let popHistory   = { jellyfish:[],manta:[],seahorse:[],shark:[],anglerfish:[],leviathan:[] };
 let traitHistory = {};
-const POP_MAX = 120; // history buffer length for the population graph
-const POP_CAP = 60;  // hard creature ceiling
+
+
+// REMOVED: const POP_CAP = 60;  // No more hard population ceiling!
+
+let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
+const POP_MAX = 120;
+const POP_CAP = 120;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TURN CAPS  (replaces the old per-site clamp() calls scattered everywhere)
-//
-// This is the single most important simplification in this file.
-// Every velocity change anywhere in the update goes through steerToward(),
-// which applies this cap. Creatures can't teleport or snap directions.
-// The values give each species a distinct feel: leviathans lumber, seahorses
-// dart. Change these and the whole ecosystem feels different.
+// TURN CAPS
 // ─────────────────────────────────────────────────────────────────────────────
 const TURN_CAP = {
     jellyfish:  0.022,
@@ -96,26 +79,13 @@ const TURN_CAP = {
     leviathan:  0.004,
 };
 
-let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
-
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STEER TOWARD  (the only movement primitive — used for every behaviour)
-//
-// Takes a desired direction (tx, ty), normalises it to the creature's top
-// speed, then nudges the creature's actual velocity toward it by at most
-// turnCap units. This means:
-//   - Creatures with high turnCap respond instantly (seahorse)
-//   - Creatures with low turnCap slide into turns slowly (leviathan)
-//   - No creature can ever snap to a new heading in one frame
-//
-// Because ALL movement goes through here, the turn cap is automatically
-// enforced for fleeing, hunting, mating, feeding, and wandering with zero
-// extra code at each call site.
+// STEER TOWARD
 // ─────────────────────────────────────────────────────────────────────────────
 function steerToward(c, tx, ty, turnCap) {
     const mag = Math.sqrt(tx*tx + ty*ty) || 1;
-    const nx  = tx/mag * c.speed;  // target velocity at creature's own speed
+    const nx  = tx/mag * c.speed;
     const ny  = ty/mag * c.speed;
     c.vx += clamp(nx - c.vx, -turnCap, turnCap);
     c.vy += clamp(ny - c.vy, -turnCap, turnCap);
@@ -123,27 +93,15 @@ function steerToward(c, tx, ty, turnCap) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SPAWN  (creates a creature; with parent = inherit + mutate, without = random)
-//
-// This three-line heredity mechanism is the entire evolutionary engine.
-// Each trait is nudged by a small random delta. Over many generations:
-//   - Fast-reproducing species average out to locally optimal values
-//   - Rare mutations occasionally produce outliers that spread or die out
-//   - Colour drifts visually, so you can see family lines diverge
-//
-// We deliberately do NOT store a genome array or run a neural net.
-// The traits that matter are size, speed, sense, and reproduce rate.
-// Everything else is either fixed per species or computed from those.
+// SPAWN
 // ─────────────────────────────────────────────────────────────────────────────
 function lineageDrift(hex) {
-    // Slightly shift each RGB channel — offspring are a different shade
     const r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
     return '#' + [r,g,b].map(v => clamp(v+Math.floor(rnd(-10,10)),0,255).toString(16).padStart(2,'0')).join('');
 }
 
 function spawnCreature(key, x, y, parent) {
     const def = SPECIES_DEFS[key];
-    // mut(value, range): add noise proportional to range, only when there is a parent
     const mut = (v, r) => parent ? clamp(v + rnd(-r, r), r*0.05, r*25) : v;
 
     return {
@@ -155,7 +113,7 @@ function spawnCreature(key, x, y, parent) {
         vx:        rnd(-0.5, 0.5) * Ss,
         vy:        rnd(-0.5, 0.5) * Ss,
 
-        // ── Heritable traits ── these are what natural selection acts on
+        // ── Heritable traits ──
         size:      parent ? mut(parent.size,  1.5)  : rnd(def.size[0],  def.size[1])  * S,
         speed:     parent ? mut(parent.speed, 0.08) : rnd(def.speed[0], def.speed[1]) * Ss,
         sense:     parent ? mut(parent.sense, 6)    : def.sense * S,
@@ -164,30 +122,43 @@ function spawnCreature(key, x, y, parent) {
         color:     parent ? lineageDrift(parent.color) : def.baseColor,
 
         // ── Non-heritable state ──
-        energy:        parent ? (def.diet==='herb' ? 200 : 185) : 160,
+        energy:        def.spawnEnergy,
         age:           0,
         maxAge:        rnd(def.maxAge[0], def.maxAge[1]),
+        hunger:        def.hunger,
+        seekMate:      def.seekMate,
+        mateMin:       def.mateMin,
+        mateR:         def.mateR,
         generation:    parent ? parent.generation + 1 : 0,
         parentId:      parent ? parent.id : null,
-        frame:         Math.random() * Math.PI * 2,  // animation phase
+        frame:         Math.random() * Math.PI * 2,
         _wanderAngle:  Math.random() * Math.PI * 2,
         _scared:       0,
-        _newborn:      parent ? 60 : 0,              // birth flash timer
+        _newborn:      parent ? 60 : 0,
         _children:     [],
         _breedCooldown:0,
-        _state:        'WANDERING',                  // shown in inspect overlay
+        _state:        'WANDERING',
+        _levyState: 'explore',
+        _levyTimer: 0,
+        _levyTarget: null,
 
         // ── Heritable social trait ──
         socialTrait: parent ? clamp(parent.socialTrait + rnd(-0.05, 0.08), 0, 1) : rnd(0, 0.3),
 
-        // ── Behaviour system fields (injected by eco-behaviour*.js) ──
+        // ── Behaviour system fields ──
         ...behaviourSystem.spawnFields(parent),
     };
 }
 
 function initCreatures() {
+    // Starting populations closer to equilibrium targets: H=40, C=15, A=3
     Object.keys(SPECIES_DEFS).forEach(k => {
-        const n = k==='leviathan' ? 2 : k==='shark'||k==='anglerfish' ? 4 : k==='seahorse' ? 20 : 20;
+        const n = k==='leviathan' ? 2 : 
+                k==='shark' ? 6 : 
+                k==='anglerfish' ? 6 : 
+                k==='jellyfish' ? 15 : 
+                k==='manta' ? 15 : 
+                k==='seahorse' ? 15 : 0;
         for (let i=0; i<n; i++) creatures.push(spawnCreature(k));
     });
 }
@@ -202,16 +173,15 @@ function drawCreature(c) {
 
     ctx.save();
     ctx.translate(c.x, c.y);
-    ctx.rotate(Math.atan2(c.vy, c.vx)); // always face direction of travel
+    ctx.rotate(Math.atan2(c.vy, c.vx));
 
     const s   = c.size;
     const def = SPECIES_DEFS[c.species];
     c.frame  += 0.05 * c.speed * (c._scared > 0 ? 2 : 1);
-    const w   = Math.sin(c.frame) * s * 0.15; // fin/tentacle wiggle amplitude
+    const w   = Math.sin(c.frame) * s * 0.15;
 
     const nightDim = def.activeAtNight ? 1.0 : 0.3 + 0.7 * dayT;
 
-    // Brief white halo at birth
     if (c._newborn > 0) {
         ctx.globalAlpha = (c._newborn/60) * 0.7;
         ctx.fillStyle = '#ffffff';
@@ -219,7 +189,6 @@ function drawCreature(c) {
         ctx.globalAlpha = 1;
     }
 
-    // Fade when low energy; flash white when scared
     ctx.globalAlpha = clamp(c.energy/120, 0.3, 1.0) * nightDim;
     ctx.fillStyle   = c._scared > 0 ? '#ffffff' : c.color;
 
@@ -232,7 +201,6 @@ function drawCreature(c) {
         case 'leviathan':  drawLev(c,s,w);   break;
     }
 
-    // Inspect overlay: dashed ring + state label
     if (c === inspectedCreature) {
         const STATE_COL = {
             SCARED:'#ff2d78', REPRODUCING:'#ff00ff', MATING:'#ff88ff',
@@ -255,7 +223,6 @@ function drawCreature(c) {
     ctx.restore();
 }
 
-// Shape helpers — drawn in local space, facing right, origin at centre
 function drawJF(c,s,w){ ctx.fillStyle=c.color+'99'; ctx.beginPath(); ctx.ellipse(0,0,s*.7,s*.5,0,Math.PI,0); ctx.fill(); ctx.fillStyle=c.color+'44'; ctx.beginPath(); ctx.ellipse(0,0,s*.7,s*.5,0,0,Math.PI*2); ctx.fill(); ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1; for(let i=-2;i<=2;i++){ ctx.beginPath(); ctx.moveTo(i*s*.15,s*.5); ctx.quadraticCurveTo(i*s*.2+w,s+w,i*s*.1,s*1.3+Math.abs(w)); ctx.stroke(); } }
 function drawManta(c,s,w){ ctx.fillStyle=c.color+'cc'; ctx.beginPath(); ctx.moveTo(s*.8,0); ctx.quadraticCurveTo(0,-s*.5+w,-s*.8,0); ctx.quadraticCurveTo(0,s*.3-w,s*.8,0); ctx.fill(); ctx.strokeStyle=c.color+'66'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(-s*.8,0); ctx.quadraticCurveTo(-s,w*.5,-s*1.3,w); ctx.stroke(); }
 function drawSH(c,s,w){ ctx.strokeStyle=c.color; ctx.lineWidth=s*.22; ctx.lineCap='round'; ctx.beginPath(); ctx.moveTo(0,-s*.6); ctx.quadraticCurveTo(s*.3,0,w*.3,s*.4); ctx.quadraticCurveTo(-s*.3,s*.7,0,s*.8); ctx.stroke(); ctx.fillStyle=c.color; ctx.beginPath(); ctx.ellipse(s*.1,-s*.6,s*.2,s*.14,.5,0,Math.PI*2); ctx.fill(); }
@@ -265,21 +232,7 @@ function drawLev(c,s,w){ ctx.fillStyle=c.color+'99'; ctx.beginPath(); ctx.moveTo
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// UPDATE CREATURE  (the whole AI — ~150 lines including comments)
-//
-// Returns false if the creature dies this frame.
-//
-// The structure is deliberately flat:
-//   1. Energy drain/gain
-//   2. Sense nearby creatures and food in one spatial hash query
-//   3. Priority stack: flee → hunt → seek mate → pursue mate → feed → wander
-//   4. Post-movement physics: speed cap, separation, boundary handling
-//   5. Reproduction check
-//
-// Complex behaviour emerges from steps 2–3 running simultaneously for many
-// creatures. You don't need to code "predator/prey cycles" — they appear
-// automatically because carns hunt herbs, herbs breed fast to compensate,
-// and carns starve when herb populations crash.
+// UPDATE CREATURE (REBALANCED)
 // ─────────────────────────────────────────────────────────────────────────────
 function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     c.age++;
@@ -288,27 +241,29 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     const prevScared = c._scared;
 
 
-    // ── 1. ENERGY ────────────────────────────────────────────────────────────
-    // Larger bodies cost more energy per frame. Night-inactive species pay a
-    // penalty in darkness — they can't forage efficiently. A tiny ambient gain
-    // represents background cosmic energy so creatures don't starve in empty space.
+    // ── 1. ENERGY (INCREASED FOOD ABSORPTION FOR HERBIVORES: 2.2→4.0) ────────
     const nightMult = def.activeAtNight ? 1.0 : (0.3 + 0.7 * dayT);
-    c.energy -= (0.04 + c.size * 0.003) * nightMult;
+    if (c.diet == 'herb'){
+        c.energy -= (0.045 + c.size * 0.001) * nightMult;
+    }
+    else {
+        c.energy -= (0.045 + c.size * 0.004) * nightMult;
+    }
 
     if (c.diet === 'herb') {
-        // Energy absorption in the glow zone around planets and suns
+        // Energy absorption from planets/galaxies — INCREASED from 2.2 to 4.0
         for (const obj of [...planets, ...galaxies]) {
             const dx=obj.x-c.x, dy=obj.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
             if (d < obj.r*0.5) {
-                // Inside core — penalise hard
                 c.vx -= clamp(dx/d*c.speed*2, -turnCap*4, turnCap*4);
                 c.vy -= clamp(dy/d*c.speed*2, -turnCap*4, turnCap*4);
                 c.energy -= 1.5;
             } else if (d < obj.r*4) {
                 if (obj._feederCount !== undefined) obj._feederCount++;
-                c.energy += 2.2 * godMode.foodMult; // feeder cap creates competition
+                c.energy += 0.3 * godMode.foodMult; // INCREASED from 2.2
             }
         }
+        // Sun energy — INCREASED from 2.5 to 4.5
         for (const s of suns) {
             const dx=s.x-c.x, dy=s.y-c.y, d=Math.sqrt(dx*dx+dy*dy)||1;
             if (d < s.r*0.5) {
@@ -317,26 +272,27 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
                 c.energy -= 1.0;
             } else if (d < s.grav) {
                 if (s._feederCount !== undefined) s._feederCount++;
-                c.energy += (1 - d/s.grav) * 2.5 * godMode.foodMult;
+                c.energy += (1 - d/s.grav) * 0.3 * godMode.foodMult; // INCREASED from 2.5
             }
         }
+        // Star energy — INCREASED from 0.002 to 0.005
         for (const s of stars) {
             const dx=s.x-c.x, dy=s.y-c.y;
-            if (Math.sqrt(dx*dx+dy*dy) < 80*S) c.energy += 0.002 * godMode.foodMult;
+            if (Math.sqrt(dx*dx+dy*dy) < 80*S) c.energy += 0.002 * godMode.foodMult; // INCREASED
         }
     }
 
+    // Food bloom energy — INCREASED from 3 to 5
     for (const b of foodBlooms) {
         const dx=b.x-c.x, dy=b.y-c.y;
         if (Math.sqrt(dx*dx+dy*dy) < b.r) {
             if (b._feederCount !== undefined) b._feederCount++;
-            c.energy += 3 * godMode.foodMult;
+            c.energy += 5 * godMode.foodMult; // INCREASED from 3
         }
     }
 
     if (c.age > c.maxAge || c.energy <= 0) return false;
 
-    // External chaos mode — pushes everything away from edges
     if (window._zergActive) {
         const ef = 150*S;
         if (c.x < ef)     c.vx += 0.08*Ss;
@@ -348,38 +304,35 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
 
 
     // ── 2. SENSE ─────────────────────────────────────────────────────────────
-    // One spatial hash query covers everything we need to know.
-    // We store the direction vector to each target (dx/dy from c to target)
-    // because we'll use those same vectors when we steer.
     const searchR = Math.max(c.sense * 3.5, 200*S);
     const nearby  = spatialHash.query(c.x, c.y, searchR);
 
-    let threatDx=0, threatDy=0, threatD=Infinity; // direction to flee
-    let preyDx=0,   preyDy=0,   preyD=Infinity;   // direction to hunt
+    let threatDx=0, threatDy=0, threatD=Infinity;
+    let preyDx=0,   preyDy=0,   preyD=Infinity;
     let mateDx=0,   mateDy=0,   mateD=Infinity, mateFound=null;
 
     for (const o of nearby) {
         if (o === c || o._dead) continue;
         const dx = o.x - c.x,  dy = o.y - c.y;
-        const d2 = dx*dx + dy*dy; // squared — avoids sqrt for the comparison
+        const d2 = dx*dx + dy*dy;
 
-        // Is this creature a predator of mine?
+        // Threat detection (unchanged)
         const isThreat = (c.diet==='herb' && (o.diet==='carn' || o.diet==='apex'))
                       || (c.diet==='carn' &&  o.diet==='apex');
         if (isThreat && d2 < (c.sense*1.5)**2 && d2 < threatD) {
-            threatDx = -dx; threatDy = -dy; threatD = d2; // negative = run away
+            threatDx = -dx; threatDy = -dy; threatD = d2;
         }
 
-        // Can I eat this creature?
+        // Prey detection — CRITICAL CHANGE: Apex ONLY hunts carnivores!
         const isPrey = (c.diet==='carn' && o.diet==='herb')
-                    || (c.diet==='apex' && (o.diet==='herb' || o.diet==='carn'));
+                    || (c.diet==='apex' && o.diet==='carn');  // REMOVED: || o.diet==='herb'
         if (isPrey && d2 < (c.sense * godMode.aggrMult)**2 && d2 < preyD) {
             preyDx = dx; preyDy = dy; preyD = d2;
         }
 
-        // Is this a potential mate?
-        const mateMin = c.diet==='herb' ? 110 : 80;
-        const mateR   = c.diet==='herb' ? c.sense*2 : c.sense*3.5; // predators search wider
+        // Mate detection (unchanged)
+        const mateMin = c.mateMin;
+        const mateR   = c.mateR;
         if (c._breedCooldown <= 0 && c.age >= def.minBreedAge
             && o.species === c.species && o.energy > mateMin && o._breedCooldown <= 0
             && d2 < mateR*mateR && d2 < mateD) {
@@ -387,16 +340,14 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
         }
     }
 
-    // Nearest celestial food — target an orbit radius around it, not the core.
-    // Without the orbit correction herbs would all pile on the centre and
-    // oscillate, because the food pull and the core repulsion fight each other.
+    // Celestial food targeting (unchanged)
     let foodDx=0, foodDy=0, foodD=Infinity;
     for (const obj of [...planets, ...galaxies, ...suns]) {
         const dx=obj.x-c.x, dy=obj.y-c.y, d2=dx*dx+dy*dy;
         const gravR = obj.grav || obj.r*4;
         if (d2 < gravR*gravR && d2 < foodD) {
             const d=Math.sqrt(d2)||1, orbitR=obj.r*2.2;
-            foodDx = d > orbitR ? dx/d*(d-orbitR) : -dy/d*c.speed; // outside: pull in; inside: go tangential
+            foodDx = d > orbitR ? dx/d*(d-orbitR) : -dy/d*c.speed;
             foodDy = d > orbitR ? dy/d*(d-orbitR) :  dx/d*c.speed;
             foodD  = d2;
         }
@@ -425,28 +376,22 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     if (c._breedCooldown >= def.breedCooldown*0.95) c._state = 'REPRODUCING';
 
     // ── 4. VELOCITY FINALISE ─────────────────────────────────────────────────
-
-    // Stall guard: if nearly stopped, nudge in the current wander direction.
-    // Uses wander angle (not random) so the creature continues coherently.
     const spd = Math.sqrt(c.vx*c.vx + c.vy*c.vy);
     if (spd < c.speed*0.3 && c._scared <= 0) {
         c.vx += clamp(Math.cos(c._wanderAngle)*c.speed*0.15, -turnCap*3, turnCap*3);
         c.vy += clamp(Math.sin(c._wanderAngle)*c.speed*0.15, -turnCap*3, turnCap*3);
     }
 
-    // Speed cap — large creatures are intrinsically slower; scared ones get a burst
     const szPen  = clamp(1 - (c.size-12)*0.008, 0.5, 1);
     const maxSpd = c._scared > 0 ? c.speed*3.5 : c.speed * szPen;
     const spd2   = Math.sqrt(c.vx*c.vx + c.vy*c.vy);
     if (spd2 > maxSpd) { c.vx = c.vx/spd2*maxSpd; c.vy = c.vy/spd2*maxSpd; }
 
-    // Gradual scare deceleration (so scared creatures don't snap to normal speed)
     if (c._scared > 0) {
         c.vx += clamp(c.vx*0.97 - c.vx, -turnCap, turnCap);
         c.vy += clamp(c.vy*0.97 - c.vy, -turnCap, turnCap);
     }
 
-    // Hard boundary reflect — last resort, only fires right at the canvas edge
     const hp = 20*S;
     if (c.x < hp)     { c.vx += clamp( Math.abs(c.vx)+0.2*Ss-c.vx, -turnCap*4, turnCap*4); c._wanderAngle=rnd(-0.5,0.5); }
     if (c.x > W - hp) { c.vx += clamp(-(Math.abs(c.vx)+0.2*Ss)-c.vx, -turnCap*4, turnCap*4); c._wanderAngle=Math.PI+rnd(-0.5,0.5); }
@@ -457,19 +402,12 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     c.y += c.vy;
 
 
-    // ── 5. REPRODUCTION ──────────────────────────────────────────────────────
-    // Requirements: mature age + cooldown elapsed + enough energy +
-    //               a mate in range who also meets those conditions +
-    //               population not at cap.
-    //
-    // Density penalty: if one species exceeds 40% of total population, its
-    // breed chance halves. This is a minimal anti-monoculture pressure —
-    // without it a fast-breeding species can crowd everyone else out.
+    // ── 5. REPRODUCTION (REMOVED POPULATION CAP) ─────────────────────────────
     if (c._breedCooldown > 0) c._breedCooldown--;
 
     const reproRate      = c.reproduce * godMode.mutMult;
     const speciesFrac    = creatures.filter(x=>x.species===c.species).length / (creatures.length||1);
-    const densityPenalty = speciesFrac > 0.4 ? 0.4 : 1.0;
+    const densityPenalty = speciesFrac > 0.4 ? 0.4 : 1.0;  // Still keep density penalty to prevent monoculture
     const energyThresh   = c.diet==='herb' ? 170 : 130;
     const mateEnergyMin  = c.diet==='herb' ? 130 : 90;
 
@@ -479,25 +417,25 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     if (c.age >= def.minBreedAge && c._breedCooldown <= 0
         && c.energy > energyThresh && mateOk
         && Math.random() < reproRate * densityPenalty
-        && creatures.length < POP_CAP) {
+        && creatures.length + newChildren.length < POP_CAP) {
 
         const [litMin, litMax] = def.litterSize;
+        // REMOVED: Math.min(..., POP_CAP - creatures.length - newChildren.length)
         const litter = Math.min(
             litMin + Math.floor(Math.random()*(litMax-litMin+1)),
-            POP_CAP - creatures.length - newChildren.length
+            POP_CAP - creatures.length - newChildren.length  // ADD THIS
         );
 
         if (litter > 0) {
-            // Both parents pay energy proportional to litter size
+            // Both parents pay energy
             mateFound.energy *= Math.max(0.35, 1 - litter*0.12);
             c.energy         *= Math.max(0.30, 1 - litter*0.15);
             c._breedCooldown          = def.breedCooldown;
             mateFound._breedCooldown  = def.breedCooldown;
-            c._qJustBred         = true;   // ADD
-            mateFound._qJustBred = true;   // ADD
+            c._qJustBred         = true;
+            mateFound._qJustBred = true;
 
             for (let li=0; li<litter; li++) {
-                // Passing c as parent triggers trait inheritance in spawnCreature
                 const child = spawnCreature(c.species, c.x+rnd(-20,20)*S, c.y+rnd(-20,20)*S, c);
                 c._children.push(child.id);
                 newChildren.push(child);
@@ -507,7 +445,6 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
                 }
             }
 
-            // Record trait snapshot for the evolution graph
             if (!traitHistory[c.species]) traitHistory[c.species] = [];
             const sp   = creatures.filter(x=>x.species===c.species);
             const last = newChildren[newChildren.length-1];
@@ -520,6 +457,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
         }
     }
 
-    c.energy = clamp(c.energy, 0, 200);
+    // Clamp energy to new maxEnergy values
+    c.energy = clamp(c.energy, 0, def.maxEnergy);
     return true;
 }

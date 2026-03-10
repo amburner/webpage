@@ -94,18 +94,38 @@ function loop(){
     creatures=creatures.filter(c=>{ if(c._dead) return false; return updateCreature(c,planets,galaxies,stars,newChildren,suns); });
     newChildren.forEach(ch=>creatures.push(ch));
 
-    const RESPAWN_COUNT={jellyfish:8,manta:8,seahorse:8,shark:4,anglerfish:4,leviathan:3};
-    Object.keys(SPECIES_DEFS).forEach(k=>{
-        if(!creatures.some(c=>c.species===k)){
-            const def=SPECIES_DEFS[k];
-            const margin=80*S;
-            const n=RESPAWN_COUNT[k]??2;
-            Array.from({length:n},(_,i)=>({x:rnd(margin,i<n/2?W*0.45:W*0.55+margin),y:rnd(margin,H-margin)})).forEach(pos=>{
-                const c=spawnCreature(k,pos.x,pos.y);
-                c.age=0;
-                c.energy=160;
-                creatures.push(c);
-            });
+    // Respawn extinct species
+    const RESPAWN_COUNT = {
+        jellyfish: 8,
+        manta: 8,
+        seahorse: 8,
+        shark: 4,
+        anglerfish: 4,
+        leviathan: 2
+    };
+
+    Object.keys(SPECIES_DEFS).forEach(k => {
+        // Check if species is extinct
+        if (!creatures.some(c => c.species === k)) {
+            const def = SPECIES_DEFS[k];
+            const margin = 80 * S;
+            const n = RESPAWN_COUNT[k] ?? 2;
+            
+            // Only respawn if under population cap
+            if (creatures.length + n <= POP_CAP) {
+                // Spawn in scattered positions
+                Array.from({length: n}, (_, i) => ({
+                    x: rnd(margin, i < n/2 ? W*0.45 : W*0.55 + margin),
+                    y: rnd(margin, H - margin)
+                })).forEach(pos => {
+                    const c = spawnCreature(k, pos.x, pos.y);
+                    c.age = 0;
+                    c.energy = def.spawnEnergy;
+                    creatures.push(c);
+                });
+                
+                console.log(`[Respawn] ${k} went extinct - respawned ${n} individuals`);
+            }
         }
     });
 
