@@ -1,6 +1,7 @@
 // =============================================
 // COSMIC ECOSYSTEM — UI PANELS, HUD, INPUT
 // Depends on: eco-canvas.js, eco-creatures.js
+// Now with mobile support. You're welcome.
 // =============================================
 
 // ── INSPECT PANEL ─────────────────────────────────────────────────────────
@@ -23,6 +24,10 @@ function updateInspectPanel(){
     const qTop = Array.from({length: nActions}, (_, a) => ({a, v: c.qTable?.[qBase + a] ?? 0}))
         .sort((x, y) => y.v - x.v).slice(0, 3)
         .map(({a, v}) => `${(actionNames[a] ?? '?').slice(0, 7)}:${v.toFixed(2)}`).join(' ');
+
+    // Detect touch device so we know whether to show tap-to-close or right-click hint
+    const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+
     inspectPanel.innerHTML=`
         <div style="color:${def.baseColor};font-size:13px;margin-bottom:6px">◈ ${c.species.toUpperCase()}</div>
         <div>gen: <b style="color:#ff6ec7">${c.generation}</b></div>
@@ -34,8 +39,16 @@ function updateInspectPanel(){
         <div>reproduced: <b style="color:${c.reproduced?'#00fff5':'#ff6b35'}">${c.reproduced??false}</b></div>
         <div>action: <b style="color:#ff6ec7">${c._state}</b></div>
         <div style="color:#9b7db5;font-size:9px;margin-top:4px;word-break:break-all">q-top: ${qTop}</div>
-        <div style="color:#9b7db5;font-size:10px;margin-top:4px">right-click to close</div>`;
+        ${isTouch
+            ? `<div id="inspect-close-btn" style="margin-top:8px;padding:6px 8px;background:#ff2d7833;border:1px solid #ff2d78;border-radius:4px;text-align:center;cursor:pointer;color:#ff2d78;font-size:11px">✕ close</div>`
+            : `<div style="color:#9b7db5;font-size:10px;margin-top:4px">right-click to close</div>`
+        }`;
+
     inspectPanel.style.display='block';
+
+    // Wire up the touch close button if it exists
+    const closeBtn = inspectPanel.querySelector('#inspect-close-btn');
+    if(closeBtn) closeBtn.addEventListener('click', closeInspect);
 }
 function closeInspect(){ inspectedCreature=null; if(inspectPanel) inspectPanel.style.display='none'; }
 
@@ -124,7 +137,7 @@ function addGodButton(){
         showGraph=!showGraph; showTraits=showGraph;
         graphCanvas.style.display=showGraph?'block':'none';
         if(traitPanel) traitPanel.style.display=showTraits?'block':'none';
-        if(_resetBtn) _resetBtn.style.display=showGraph?'none':'block';  // ADD THIS LINE
+        if(_resetBtn) _resetBtn.style.display=showGraph?'none':'block';
     });
     _resetBtn = document.createElement('button');
     _resetBtn.innerText = '♻ RESET';
@@ -141,17 +154,28 @@ function addGodButton(){
         Object.keys(popHistory).forEach(k => { popHistory[k] = []; });
         closeInspect();
         initCreatures();
-        if(window.ecoForcePush) window.ecoForcePush();  // ADD THIS LINE
+        if(window.ecoForcePush) window.ecoForcePush();
     });
     document.body.appendChild(_resetBtn);
     document.addEventListener('keydown',e=>{ if(e.key==='g'||e.key==='G'){ showGod=!showGod; godPanel.style.display=showGod?'block':'none'; } });
 }
 
 // ── INPUT ─────────────────────────────────────────────────────────────────
+// Long-press state — because mobile users deserve inspect too, obviously
+let longPressTimer = null;
+const LONG_PRESS_MS = 500;
+let touchStartX = 0, touchStartY = 0, touchMoved = false;
+
 function initInput(){
     canvas.style.pointerEvents='auto';
+
+    // ── MOUSE (desktop, you lucky people with right-click) ─────────────────
     canvas.addEventListener('mousedown',e=>{ if(e.button===0) isDragging=true; });
-    canvas.addEventListener('mousemove',e=>{ if(!isDragging) return; const r=canvas.getBoundingClientRect(); if(++dragBloomTimer%8===0) addFoodBloom(e.clientX-r.left,e.clientY-r.top); },{passive:true});
+    canvas.addEventListener('mousemove',e=>{
+        if(!isDragging) return;
+        const r=canvas.getBoundingClientRect();
+        if(++dragBloomTimer%8===0) addFoodBloom(e.clientX-r.left,e.clientY-r.top);
+    },{passive:true});
     canvas.addEventListener('mouseup',e=>{
         if(e.button!==0) return; isDragging=false; dragBloomTimer=0;
         const r=canvas.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
@@ -165,6 +189,85 @@ function initInput(){
         creatures.forEach(c=>{ const dx=c.x-mx,dy=c.y-my,d=Math.sqrt(dx*dx+dy*dy); if(d<c.size*4+30&&d<nd){nd=d;nearest=c;} });
         if(nearest){ inspectedCreature=nearest; updateInspectPanel(); }
     });
-    canvas.addEventListener('touchmove',e=>{ e.preventDefault(); const r=canvas.getBoundingClientRect(),t=e.touches[0]; if(++dragBloomTimer%8===0) addFoodBloom(t.clientX-r.left,t.clientY-r.top); },{passive:false});
-    canvas.addEventListener('touchend',()=>{ isDragging=false; dragBloomTimer=0; });
+
+    // ── TOUCH (mobile — hold to inspect, drag to feed, try to keep up) ─────
+
+    canvas.addEventListener('touchstart', e => {
+        const r = canvas.getBoundingClientRect();
+        const t = e.touches[0];
+        touchStartX = t.clientX - r.left;
+        touchStartY = t.clientY - r.top;
+        touchMoved = false;
+        isDragging = true;
+
+        // Long-press: half a second of commitment earns you an inspect panel
+        longPressTimer = setTimeout(() => {
+            if(touchMoved) return; // nope, they dragged — bail
+
+            isDragging = false; // cancel drag so we don't spray food on inspect
+            dragBloomTimer = 0;
+
+            if(inspectedCreature){ closeInspect(); return; }
+
+            let nearest = null, nd = Infinity;
+            creatures.forEach(c => {
+                const dx = c.x - touchStartX, dy = c.y - touchStartY;
+                const d = Math.sqrt(dx*dx + dy*dy);
+                // Bigger hit radius on mobile — fingertips aren't laser pointers
+                if(d < c.size * 5 + 44 && d < nd){ nd = d; nearest = c; }
+            });
+
+            if(nearest){
+                inspectedCreature = nearest;
+                updateInspectPanel();
+                // Haptic feedback — a little buzz never hurt anyone
+                if(navigator.vibrate) navigator.vibrate(40);
+            }
+        }, LONG_PRESS_MS);
+
+    }, { passive: true });
+
+    canvas.addEventListener('touchmove', e => {
+        e.preventDefault();
+        const r = canvas.getBoundingClientRect();
+        const t = e.touches[0];
+        const mx = t.clientX - r.left;
+        const my = t.clientY - r.top;
+
+        // If they've moved more than 10px, it's a drag — kill the long-press
+        const dx = mx - touchStartX, dy = my - touchStartY;
+        if(!touchMoved && Math.sqrt(dx*dx + dy*dy) > 10){
+            touchMoved = true;
+            clearTimeout(longPressTimer);
+            longPressTimer = null;
+        }
+
+        if(isDragging && ++dragBloomTimer % 8 === 0) addFoodBloom(mx, my);
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', e => {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+
+        // Quick tap (no drag, no long-press) — scatter nearby creatures,
+        // same as the mouse click does. Fair is fair.
+        if(!touchMoved && isDragging){
+            const r = canvas.getBoundingClientRect();
+            // Use last known touch position from touchstart
+            const mx = touchStartX, my = touchStartY;
+            creatures.forEach(c => {
+                const dx = c.x - mx, dy = c.y - my, d = Math.sqrt(dx*dx + dy*dy);
+                if(d < c.size * 5 + 35 && d > 0){
+                    const f = clamp((c.size * 2.5 + 20 - d) / (c.size * 2.5 + 20), .2, 1);
+                    const a = Math.atan2(dy, dx), sp = rnd(-.6, .6);
+                    c.vx = Math.cos(a + sp) * c.speed * 3.5 * f;
+                    c.vy = Math.sin(a + sp) * c.speed * 3.5 * f;
+                    c._wanderAngle = a + sp; c._scared = 80;
+                }
+            });
+        }
+
+        isDragging = false;
+        dragBloomTimer = 0;
+    });
 }
