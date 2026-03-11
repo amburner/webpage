@@ -326,7 +326,7 @@ body > *:not(#ecosystem-canvas):not(button):not(#eco-inspect):not(#eco-god):not(
 }
 @media (max-width: 600px) {
     body { padding: 10px; }
-    h1   { font-size: 16px !important; letter-spacing: 2px !important; }
+    h1   { font-size: 14px !important; letter-spacing: 2px !important; }
     body > div:first-of-type > div:first-child {
         flex: 0 0 30% !important; width: 30% !important;
     }
