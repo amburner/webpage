@@ -38,7 +38,7 @@ class SpatialHash {
         return out;
     }
 }
-const spatialHash = new SpatialHash(240);
+const spatialHash = new SpatialHash(120);
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ const SPECIES_DEFS = {
     seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:70,  reproduce:0.0009, hunger:70, seekMate:120, mateMin: 80, mateR: 2.5*70, activeAtNight:true, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000], spawnEnergy:80, maxEnergy:200},
     shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0012, hunger:80, seekMate:200, mateMin: 100, mateR: 3.5*120,  activeAtNight:true,  minBreedAge:700,  breedCooldown:900,  litterSize:[1,2], maxAge:[6000,12000], spawnEnergy:160, maxEnergy:300},  // 200→300
     anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:150, reproduce:0.0012, hunger:80, seekMate:160, mateMin: 100, mateR: 3.5*150,  activeAtNight:true,  minBreedAge:600,  breedCooldown:800,  litterSize:[1,2], maxAge:[5000,10000], spawnEnergy:160, maxEnergy:300},  // 200→300
-    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[1.0,1.6], sense:200, reproduce:0.0012, hunger:150, seekMate:250, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,15000], spawnEnergy:200, maxEnergy:500},  // 200→500
+    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,120],  speed:[0.7,1.2], sense:200, reproduce:0.0008, hunger:150, seekMate:250, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,15000], spawnEnergy:200, maxEnergy:500},  // 200→500
 };
 
 let creatures = [], evoLog = [];
@@ -64,8 +64,8 @@ let traitHistory = {};
 // REMOVED: const POP_CAP = 60;  // No more hard population ceiling!
 
 let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
-const POP_MAX = 50;
-const POP_CAP = 50;
+const POP_MAX = 35;
+const POP_CAP = 35;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TURN CAPS
