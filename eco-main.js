@@ -59,7 +59,6 @@ window.addEventListener('load', async ()=>{
 let frameCount=0;
 let _lastBgDayT=-1;
 let _nebulaUpdateTimer=0;
-let _bgRenderPending=false;
 
 function loop(){
     requestAnimationFrame(loop);
@@ -75,19 +74,9 @@ function loop(){
     if(_nebulaUpdateTimer>=90){ _nebulaUpdateTimer=0; nebulas.forEach(n=>n.updatePosition()); _bgDirty=true; }
 
     const dayChanged=Math.abs(dayT-_lastBgDayT)>0.004;
-    if((dayChanged||_bgDirty) && !_bgRenderPending){
-        _bgRenderPending=true;
-        const _scheduledDayT=dayT;
-        const _doRender=()=>{
-            renderBgToCache(nebulas);
-            _lastBgDayT=_scheduledDayT;
-            _bgRenderPending=false;
-        };
-        if(typeof requestIdleCallback==='function'){
-            requestIdleCallback(_doRender, {timeout:200});
-        } else {
-            setTimeout(_doRender, 0);
-        }
+    if(dayChanged||_bgDirty){
+        renderBgToCache(nebulas);
+        _lastBgDayT=dayT;
     }
 
     ctx.drawImage(_bgCanvas,0,0);
