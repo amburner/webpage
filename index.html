@@ -1,317 +1,508 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Amber Miller — Engineering Portfolio</title>
-  <script src="eco-sync.js"></script>
-  <script src="eco-canvas.js"></script>
-  <script src="eco-creatures.js"></script>
-  <script src="eco-behaviour.js"></script>  <!-- swap this line to change AI -->
-  <script src="eco-ui.js"></script>
-  <script src="eco-main.js"></script>
-  <script src="chaos-ui.js"></script>
-  <link rel="stylesheet" href="style.css">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta charset="UTF-8">
+  <title>Servo Control</title>
+  <style>
+    body { font-family: sans-serif; background: #111; color: white; padding: 20px; }
+    label { display: block; margin: 10px 0; }
+    input[type="range"] { width: 300px; }
+  </style>
 </head>
 <body>
+  <h1>Laser Control</h1>
 
-<!-- SIDEBAR NAV -->
+  <button onclick="sendCommand('on')">Toggle Laser</button>
 
-<div>
-  <div style="
-    display:inline-block;
-    vertical-align:top;
-    width:34%;
-    box-sizing:border-box;
-    background:linear-gradient(to bottom, red, orange, yellow, green, cyan, blue, violet);
-    padding:10px;
-    border:5px outset magenta;
-    font-size:13px;
-  ">
-    <p style="font-weight:bold; text-align:center; font-size:large; color: #000;">NAVIGATION</p>
-    <a href="images/Amber Miller 2025 Resume.pdf">
-        <button style="width:100%; margin:4px 0; background:#ccffcc; cursor: pointer;">Resume</button>
-    </a>
-    <a href="/cdn-cgi/l/email-protection#accd9d9c9cc1c5c0c0c9deeccbc1cdc5c082cfc3c1">
-        <img src="images/email_me.gif" style="width:100%; margin-top:8px;">
-    </a>
-  </div>
-
-  <div style="
-    display:inline-block;
-    vertical-align:top;
-    width:64%;
-  ">
-    <header>
-      <div style="text-align:center">
-        <h1 style="margin-bottom:4px;">Amber Miller</h1>
-        <p style="margin:2px 0; font-size:11px;"><strong>Engineering Portfolio</strong></p>
-        <p class="blink" style="margin-top:2px; margin-bottom:4px; font-size:10px;">Last updated: always</p>
-      </div>
-    </header>
-
-    <marquee scrollamount="6" style="margin-top:-20px; font-size:11px;">🚀 Aerospace • Controls • Robotics • Systems Engineering 🚀</marquee>
-  </div>
-</div>
-
-
-<h2 style="text-align: center; font-size: 48px;">Projects</h2>
-<div class="projects-container">
-
-
-  <!-- PROJECT 5 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Semi-Automatic Cat Toy Robot</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <p style="font-size:24px;"><strong>Construction + Prototype + "Final Product"</strong></p>
+  <h2>Random Configuration</h2>
+  <div style="display: flex; gap: 20px;">
         <div>
-          <img src="catBot/prototype_front.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/prototype_back.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/internals.jpg" style="width:49%; display:inline-block;">
-          <img src="catBot/DemoPic.png" style="width:49%; display:inline-block;">
-        </div>
-        <p style="font-size:24px;"><strong>Demo Video</strong></p>
-        <video controls height="600px"">
-          <source src="catBot/DemoVideo.mp4" type="video/mp4">
-          Your Browser Does Not Support Video
-        </video>
-        <p><a href="https://github.com/amburner/CatBot">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:18px;">Motivation:</p>
-        <p>The current market for cat toys contains very few options for a toy 
-          which both serves live video and allows the user to remotely play with their cat using a laser pointer.
-          Among these devices, it is typical for the video feed to have a 1500-2000 ms delay due to network latency, 
-          video encoding, decoding, and compression, and slow webhosting. Additionally, such devices typically cost upwards of $100
-          and can require a subscription service to access the video feed. The features on these devices are also very limited.
-          As such, I set out to create a low-cost semi-automatic cat toy robot that could stream live video with minimal latency
-          and allow for remote laser pointer play with my cat, but also enable custom features such as customizable laser patterns, including
-          a modular random trajectory generator, the ability to record and playback laser trajectories, and record and save video, enabling
-          the cat toy to double as a security camera.
-        </p>
-        <p style="font-size:16px;">Project Overview</p>
-        <ul>
-          <li>Built a semi-automatic cat toy robot with pan-tilt laser targeting controlled via a web interface</li>
-          <li>Developed low-latency MJPEG streaming from a Raspberry Pi camera, with live video flip and zoom controls</li>
-          <li>Implemented servo motion control with adjustable speed, angle limits, and smooth movement interpolation</li>
-          <li>Added random walk and manual targeting modes for interactive play, with recording and replay functionality</li>
-          <li>Integrated lidar sensing for distance measurement and real-time telemetry over WebSocket</li>
-          <li>Created a full-stack Python + Flask + WebSocket system with authentication, user management, and persistent configuration</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">Autonomous Systems</div>
-          <div class="tag">Quadrotor Drone</div>
-          <div class="tag">Dynamical Systems</div>
-          <div class="tag">Controls</div>`1`
-        </div>
-      </div>
+      <label>
+        baseWalkUpdates:
+        <input id="baseWalkUpdates" type="number" value="30" min="0" max="1000">
+      </label>
+      <label>
+        deltaWalkUpdates:
+        <input id="deltaWalkUpdates" type="number" value="100" min="0" max="1000">
+      </label>
+      <label>
+        baseAngleAddition:
+        <input id="baseAngleAddition" type="number" value="1.7" min="-1000" max="1000">
+      </label>
+      <label>
+        deltaAngleAddition:
+        <input id="deltaAngleAddition" type="number" value="1" min="-1000" max="1000">
+      </label>
+      <label>
+        baseWaitTime:
+        <input id="baseWaitTime" type="number" value="0.001" min="0" max="1000">
+      </label>
+      <label>
+        deltaWaitTime:
+        <input id="deltaWaitTime" type="number" value="0.008" min="-1000" max="1000">
+      </label>
     </div>
-  </details>
+  </div>
 
-<!-- PROJECT: COSMIC ECOSYSTEM -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Cosmic Ecosystem — Live Ecology Simulation</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <img src="ecosystem_fit.png" alt="Ecosystem population dynamics and phase space analysis" style="border:0px; width:100%;"/>
-        <p><a href="cosmic_ecosystem_report.pdf">Full Report</a></p>
-        <p><a href="https://github.com/amburner/webpage/tree/main">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:18px;">Overview:</p>
-        <p>A real-time browser ecosystem simulation where six species across four trophic levels
-          hunt, breed, and die inside a procedurally-generated cosmic canvas. Each creature runs
-          its own drive hierarchy and moves independently every frame. Multi-tab sync is handled
-          via Firebase Realtime Database. Population dynamics were modeled with an extended
-          Lotka–Volterra ODE system and validated against live simulation data.</p>
-        <p style="font-size:16px;">Key Features</p>
-        <ul>
-          <li>Six species (jellyfish, manta, seahorse, shark, anglerfish, leviathan) with heritable traits, Q-tables, and Lévy-flight wandering</li>
-          <li>Procedural cosmic background: 90 stars, 8 planets, 6 suns, 4 galaxies, comets, nebulae, and a day/night cycle driving food bloom spawns</li>
-          <li>Firebase Realtime Database sync — multiple browser tabs share one live simulation with automatic master election and offline fallback</li>
-          <li>Priority-ordered drive hierarchy per creature: flee > hunt/feed > seek mate > wander, with spiral mate-search and contact-range kill checks</li>
-          <li>God Mode panel for live parameter tuning: food multiplier, predator aggression, mutation rate, day speed</li>
-          <li>Extended Lotka–Volterra formulation with spatial encounter saturation, energy-gated reproduction, and circadian forcing — linearized stability analysis predicts ~300 s oscillation period, confirmed by FFT of simulation data</li>
-          <li>"Chaos UI" easter egg: mouse-trail sparkle effects, cycling neon headers, and a Zerg Rush mini-game where zerglings attack the portfolio cards</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">JavaScript</div>
-          <div class="tag">Firebase</div>
-          <div class="tag">Simulation</div>
-          <div class="tag">Lotka–Volterra</div>
-          <div class="tag">Dynamical Systems</div>
-          <div class="tag">Ecology</div>
-        </div>
-      </div>
+  <button onclick="startStreamRecording()">🎥 Start Video Recording</button>
+  <button onclick="stopStreamRecording()">⏹ Stop & Download</button>
+  <button onclick="randomWalk()">Random Walk</button>
+  <button onclick="readLidar()">Read Lidar</button>
+
+  <h2>Gamepad</h2>
+
+  <div style="margin:10px 0;">
+    <button id="videoFlipXBtn">🪞 Flip Video Horizontally</button>
+    <button id="videoFlipYBtn">🪞 Flip Video Vertically</button>
+    <button id="videoResetFlipBtn">↩️ Reset Video Flip</button>
+  </div>
+
+
+  <div style="display: flex; gap: 20px;">
+    <div>
+      <label>
+        Horizontal Min:
+        <input id="boundXMin" type="number" value="60" min="0" max="180">°
+      </label>
+      <label>
+        Horizontal Max:
+        <input id="boundXMax" type="number" value="180" min="0" max="180">°
+      </label>
     </div>
-  </details>  
-
-  <!-- PROJECT 2 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">Autonomous Drone: Art in the Sky</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <p style="font-size:24px;"><strong>Project Overview + Demo Video</strong></p>
-        <video controls width="100%">
-          <source src="Crazyfly/Autonomous Drone Presentation.mp4" type="video/mp4">
-          Your Browser Does Not Support Video
-        </video>
-        <p><a href="Crazyfly/Autonomous Drone Project.pdf">Full Report</a></p>
-        <p><a href="https://github.com/amburner/Autonomous-Drone">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:16px;">Contributions</p>
-        <ul>
-          <li>Designed and Tuned LQR Controller and Observer offline using data collected from MoCap system as well as parameters of Crazyflie Drone with MoCap and LED Deck attachments</li>
-          <li>Created Pygame Interface for User input to allow for mouse cursor drawings</li>
-          <li>Converted cursor-drawn image to numpy array containing pixel location and timestamp data</li>
-          <li>Sampled from pixel data to map a set of smooth bezier curves to the image with constraints on curvature to enable dynamically feasible flight trajectory</li>
-          <li>Auto-calibrated flight trajectory to drone location and capped maximum velocity by time scaling</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">Autonomous Systems</div>
-          <div class="tag">Art</div>
-          <div class="tag">Quadrotor Drone</div>
-          <div class="tag">Dynamical Systems</div>
-          <div class="tag">Controls</div>
-          <div class="tag">Trajectory Generation</div>
-        </div>
-      </div>
+    <div style="margin-top:10px;">
+      <button id="flipXBtn">↔️ Flip Horizontal</button>
+      <button id="flipYBtn">↕️ Flip Vertical</button>
     </div>
-  </details>
-
-  
-  <!-- PROJECT 1 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">AIAA 2024-2025 Undergraduate Team Aircraft Design</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <img src="AIAA_project/configuration.png" alt="Aircraft configuration image" style="border:0px; width:100%;"/>
-        <p><a href="AIAA_project/AE443_Team_7_FDR.pdf">Full Report</a></p>
-        <p><a href="https://github.com/amburner/S-C-Cost---AIAA-2025-Supersonic-Aircraft">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:20px;"><strong>Role:</strong> Stability & Control, Cost</p>
-        <details><summary style="cursor:pointer; font-size:16px; color:#ff0000;">Requirements:</summary><div>
-          <ul>
-            <li>Performance: Mach 1.6 at 35,000 ft</li>
-            <li>Instantaneous turn rate ≥ 18°/s at 35,000 ft</li>
-            <li>Specific excess power and 5-g turn performance requirements at sea level and 15,000 ft</li>
-            <li>Weapons: Carry AIM-120 AMRAAMs (number and carriage method tradable)</li>
-            <li>Structure: +7g/-3g limit loads (clean, 50% int. fuel), Withstand 2133 psf dynamic pressure, 2,000 hour service life</li>
-            <li style="font-size:16px;"><strong>Stability:</strong> Subsonic longitudinal static margin between -10% & +10%</li>
-            <li>Remote Piloting: Fully remote piloted infrastructure, positive threat ID, communication bandwidth considerations</li>
-            <li style="font-size:16px;"><strong>Cost:</strong> Flyaway cost ≤ $25 million (2024 USD) for 1000 aircraft buy</li>
-          </ul>
-        </details>
-        <p><strong>Stability and Control:</strong></p>
-        <ul>
-          <li>Aircraft sizing and configuration optimization using contour plots</li>
-          <li>Horizontal tail sizing via scissor plots (static margin & tail stall)</li>
-          <li>Trim drag minimization for most fuel-demanding mission segment</li>
-          <li>Static and dynamic stability analysis using Roskam & Nelson methods</li>
-          <li>Crosswind trim triangle with asymmetric ordnance and fuel loading</li>
-          <li>Validation using AVL and aerodynamic drag buildup</li>
-        </ul>
-        <p><strong>Cost:</strong></p>
-        <ul>
-          <li>Compared Modified DAPCA IV appended with recent cost models for considerations for titanium and composite usage and Roskam cost models to ensure flyaway cost and inform design decisions including material usage, aircraft configuration, and control surface selection</li>
-          <li>Ensured flyaway cost < $25M</li>
-          <li>Lifecycle and unit cost variation with production quantity</li>
-          <li>Titanium trade study replacing up to 2400 lb of aluminum with titanium to ensure flyaway cost while meeting instantaneous turn rate requirments</li>
-        </ul>
-        <div style="text-align:center">
-          <p>Aircraft Dynamic Stability Analysis</p>
-          <img src="AIAA_project/DynamicStab.png" alt="Aircraft Dynamic Stability Analysis" style="border:0px; width:100%;"/>
-          <img src="AIAA_project/dynamicStabTable.png" alt="Aircraft Dynamic Stability Table" style="border:0px; width:100%;"/>
-          <p>RDTE Cost Analysis</p>
-          <img src="AIAA_project/DAPCABreakdown.png" alt="Aircraft DAPCA RDTE Cost" style="border:0px; width:100%;"/>
-          <img src="AIAA_project/RoskamPie.png" alt="Aircraft Roskam RDTE Cost" style="border:0px; width:100%;"/>
-          <p>Operating Cost Analysis</p>
-          <img src="AIAA_project/Operations_Cost_Breakdown.png" alt="Aircraft Roskam Operating Cost" style="border:0px; width:100%;"/>
-          <div class="tag">Aircraft Design</div>
-          <div class="tag">Stability & Control</div>
-          <div class="tag">Cost Modeling</div>
-        </div>
-      </div>
+    <div>
+      <label>
+        Speed:
+        <input id="Speed" type="number" value="10" min="0" max="360">°/s
+      </label>
     </div>
-  </details>
-
-  <!-- PROJECT 3 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">Autonomous Drone: Obstacle Course Navigation</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <p style="font-size:24px;"><strong>Demo Video</strong></p>
-        <video controls width="100%">
-          <source src="ObstacleCourse/DroneVideo.mp4" type="video/mp4">
-          Your Browser Does Not Support Video
-        </video>
-        <p><a href="ObstacleCourse/Design, Implementation, and Testing of Drone Controller Using Optimal Observer and Controller.pdf">Full Report</a></p>
-        <p><a href="ObstacleCourse/AE 352 Quadcopter Team Project Report.pdf">Dynamical System Derivation</a></p>
-        <p><a href="https://github.com/amburner/Controls-AE353-">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:16px;">Project Overview</p>
-        <ul>
-          <li>Derived dynamical system from basic drone geometry</li>
-          <li>Designed and Tuned LQR Controller and Observer in simulation using Condynsate python package</li>
-          <li>Motivated Drone to move through obstacle course by dynamically manipulating the equilibrium</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">Autonomous Systems</div>
-          <div class="tag">Quadrotor Drone</div>
-          <div class="tag">Dynamical Systems</div>
-          <div class="tag">Controls</div>
-        </div>
-      </div>
+    <div>
+      <label>
+        Vertical Min:
+        <input id="boundYMin" type="number" value="80" min="0" max="180">°
+      </label>
+      <label>
+        Vertical Max:
+        <input id="boundYMax" type="number" value="145" min="0" max="180">°
+      </label>
     </div>
-  </details>
+  </div>
 
-  <!-- PROJECT 4 -->
-  <details open class="project"><summary style="cursor:pointer; font-size:20px; color:#ff0000;">(Personal Project) Custom Software For Expedited Calculation of Fluid Volumes in Piping Systems</summary><div>
-    <div class="project-grid">
-      <div style="text-align:center">
-        <p style="font-size:24px;"><strong>Demo Video</strong></p>
-        <video controls width="100%">
-          <source src="pdfCAD/pdfCAD Video Explanation.mp4" type="video/mp4">
-          Your Browser Does Not Support Video
-        </video>
-        <p><a href="https://github.com/amburner/pdfCAD">GitHub Repository</a></p>
-      </div>
-      <div>
-        <p style="font-size:18px;">Motivation:</p>
-        <p>While Working at IMEG, the current state of completing fluid volume 
-          and pressure drop calcuations involved a lengthy excel spreadsheet where 
-          one would measure every individual twist and turn of the pipe and input that 
-          along with the pipe dimensions. For a multi-story building, 
-          these calcuations could take hours or even days. 
-          In addition, older buildings that needed mechanical system renovations often only had 
-          2D blueprints available, and converting these blueprints into a 
-          modern BIM model would be a lengthy and expensive process. 
-          As such, a method or software was needed that could expedite these calculations, 
-          while working on both BIM models and old blueprints. 
-          This software must also be intuitive to use and easy to distrubte 
-          so as to effectively replace the ubiquitous master excel spreadsheet.</p>
-        <p style="font-size:16px;">Project Overview</p>
-        <ul>
-          <li>Developed an interactive PDF-based takeoff and annotation tool tailored for MEP piping layouts</li>
-          <li>Implemented CAD-style drawing, snapping, zooming, and multi-page navigation using a custom PyQt workflow</li>
-          <li>Integrated pipe sizing logic, scale calibration, and volume calculations directly into the drawing process</li>
-          <li>Automated persistence and Excel export to generate system-level quantities and summaries for estimating and design workflows</li>
-        </ul>
-        <div style="text-align:center">
-          <div class="tag">Python</div>
-          <div class="tag">Business Software</div>
-          <div class="tag">Mechanial Systems</div>
-          <div class="tag">Cost Savings</div>
-        </div>
-      </div>
-    </div>
+  <h1 style="text-align:center;">USB Cam MJPEG</h1>
 
-  </details>
-</div>
-<footer>
-  <p>© Amber Miller</p>
-  <img src="images/rotating_aircraft.gif" alt="Rotating aircraft" style="margin-top:10px;margin-bottom:20px;margin-left:-5px;" />
-  <img src="images/robot_arm.gif" alt="Robot arm" style="margin-top:10px;margin-bottom:20px" />
-  <img src="images/rocket_ship.gif" alt="Rock ship" style="margin-top:10px;margin-bottom:20px;margin-left:-5px;" />
-</footer>
+  <div id="videoWrapper" style="display:block; margin:5px auto;">
+    <img id="streamImg" src="https://catcam.online/stream" style="
+      display:block;
+      margin:5px auto;
+    ">
+  </div>
+  <canvas id="recordCanvas" width="640" height="480" style="display:none;"></canvas>
+
+  <canvas id="gamepad" style="
+    display:block;
+    margin:20px auto;
+    background:#333;
+    border:1px solid #888;
+    touch-action:none;
+    max-width: 850px;
+    width:100%;
+    height:auto;
+  "></canvas>
+
+  <div style="margin-top:10px;">
+    <button id="recordBtn">🎙️ Record</button>
+    <button id="replayBtn">🔁 Replay</button>
+  </div>
+
+  <label>
+    <input type="checkbox" id="loopReplay">
+    🔁 Loop Replay
+  </label>
+  <script>
+    let ws;
+
+    let recorder;
+    let recordedChunks = [];
+    let isRecordingVideo = false;
+    const recordCanvas = document.getElementById("recordCanvas");
+    const rctx = recordCanvas.getContext("2d");
+
+    async function connectWebSocket() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;  // Includes port if non-standard (e.g., localhost:5000)
+      ws = new WebSocket(`${protocol}//${host}/ws`);
+
+      ws.onopen = () => console.log("WebSocket connected");
+      ws.onmessage = e => console.log("[MSG]", e.data);
+      ws.onerror = e => console.error("WebSocket error", e);
+      ws.onclose = () => {
+        console.warn("WebSocket closed, retrying in 2s...");
+        setTimeout(connectWebSocket, 2000);
+      };
+    }
+
+    function sendCommand(cmd) {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(cmd);
+      }
+    }
+    connectWebSocket();
+
+    const canvas = document.getElementById("gamepad"); // must be first
+    const ctx = canvas.getContext("2d");
+    const streamImg = document.getElementById("streamImg");
+    const videoWrapper = document.getElementById("videoWrapper");
+
+    document.getElementById("baseWalkUpdates").max = canvas.width;
+    document.getElementById("deltaWalkUpdates").max = canvas.height;
+    document.getElementById("baseAngleAddition").max = canvas.width;
+    document.getElementById("deltaAngleAddition").max = canvas.width;
+    document.getElementById("baseWaitTime").max = 10;   // reasonable
+    document.getElementById("deltaWaitTime").max = 10;  // reasonable
+
+    function resizeGamepadCanvas() {
+      // 1. Canvas should fill available width
+      const displayWidth = canvas.clientWidth;  
+      const size = displayWidth;
+
+      canvas.width = size;
+      canvas.height = size;
+
+      // 2. Make the video wrapper the exact same size
+      videoWrapper.style.width = size + "px";
+      videoWrapper.style.height = size + "px";
+
+      // 3. Force video to stretch exactly to this size
+      streamImg.style.width = size + "px";
+      streamImg.style.height = size + "px";
+      streamImg.style.objectFit = "cover";  // or "contain" if you want letterbox instead
+    }
+
+    window.addEventListener("resize", resizeGamepadCanvas);
+    resizeGamepadCanvas();
+
+    const boundXMinInput = document.getElementById("boundXMin");
+    const boundXMaxInput = document.getElementById("boundXMax");
+    const boundYMinInput = document.getElementById("boundYMin");
+    const boundYMaxInput = document.getElementById("boundYMax");
+    const loopReplayCheckbox = document.getElementById("loopReplay");
+
+    let bounds = {
+      xMin: 0, xMax: 180,
+      yMin: 0, yMax: 180
+    };
+
+    function updateBounds() {
+      bounds.xMin = parseFloat(boundXMinInput.value) || 0;
+      bounds.xMax = parseFloat(boundXMaxInput.value) || 180;
+      bounds.yMin = parseFloat(boundYMinInput.value) || 0;
+      bounds.yMax = parseFloat(boundYMaxInput.value) || 180;
+    }
+
+    [boundXMinInput, boundXMaxInput, boundYMinInput, boundYMaxInput].forEach(input => {
+      input.addEventListener("input", updateBounds);
+    });
+
+    updateBounds(); // initialize
+
+    function drawVideoToCanvas() {
+      if (!isRecordingVideo) return;
+
+      rctx.drawImage(streamImg, 0, 0, recordCanvas.width, recordCanvas.height);
+      requestAnimationFrame(drawVideoToCanvas); // keeps updating
+    }
+
+
+    async function startStreamRecording() {
+      recordCanvas.width = streamImg.width;
+      recordCanvas.height = streamImg.height;
+
+      recordedChunks = [];
+      const stream = recordCanvas.captureStream(24);
+      recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
+
+      recorder.ondataavailable = e => {
+        if (e.data.size > 0) recordedChunks.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(recordedChunks, { type: "video/webm" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "recorded_stream.webm";
+        a.click();
+        URL.revokeObjectURL(url);
+      };
+
+      recorder.start();
+      isRecordingVideo = true;
+
+      drawVideoToCanvas(); // start the update loop
+    }
+
+
+    function stopStreamRecording() {
+      if (recorder && isRecordingVideo) {
+        isRecordingVideo = false;
+        recorder.stop();
+      }
+    }
+
+    streamImg.onload = () => {
+      if (isRecordingVideo) {
+        rctx.drawImage(streamImg, 0, 0, recordCanvas.width, recordCanvas.height);
+      }
+    };
+    
+
+    const recordBtn = document.getElementById("recordBtn");
+    const replayBtn = document.getElementById("replayBtn");
+
+    let isDragging = false;
+    let targetX = 150, targetY = 150;
+
+    let recording = false;
+    let recordData = [];
+    let recordStart = 0;
+
+    function drawCrosshair(x, y) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.strokeStyle = "lime";
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+
+    function handleInput(x, y) {
+      const { x: angleX, y: angleY } = canvasToDegrees(x, y);
+      sendCommand(`position:${angleX}:${angleY}`);
+      drawCrosshair(x, y);
+
+      if (recording) {
+        const timestamp = performance.now() - recordStart;
+        recordData.push({ angleX, angleY, timestamp });
+      }
+    }
+
+    function getTouchPos(touch) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+
+      const x = (touch.clientX - rect.left) * scaleX;
+      const y = (touch.clientY - rect.top) * scaleY;
+      return { x, y };
+    }
+
+    canvas.addEventListener("mousedown", e => {
+      isDragging = true;
+      const rect = canvas.getBoundingClientRect();
+      targetX = e.clientX - rect.left;
+      targetY = e.clientY - rect.top;
+      handleInput(targetX, targetY);
+    });
+
+    canvas.addEventListener("mousemove", e => {
+      if (isDragging) {
+        const rect = canvas.getBoundingClientRect();
+        targetX = e.clientX - rect.left;
+        targetY = e.clientY - rect.top;
+        handleInput(targetX, targetY);
+      }
+    });
+
+    canvas.addEventListener("mouseup", () => isDragging = false);
+    canvas.addEventListener("mouseleave", () => isDragging = false);
+
+    canvas.addEventListener("touchstart", e => {
+      e.preventDefault();
+      isDragging = true;
+      const pos = getTouchPos(e.touches[0]);
+      targetX = pos.x;
+      targetY = pos.y;
+      handleInput(targetX, targetY);
+    });
+
+    canvas.addEventListener("touchmove", e => {
+      e.preventDefault();
+      if (isDragging && e.touches.length > 0) {
+        const pos = getTouchPos(e.touches[0]);
+        targetX = pos.x;
+        targetY = pos.y;
+        handleInput(targetX, targetY);
+      }
+    });
+
+    canvas.addEventListener("touchend", () => isDragging = false);
+    canvas.addEventListener("touchcancel", () => isDragging = false);
+
+    drawCrosshair(targetX, targetY);
+
+    recordBtn.addEventListener("click", () => {
+      if (!recording) {
+        recordData = [];
+        recordStart = performance.now();
+        recording = true;
+        recordBtn.textContent = "🛑 Stop Recording";
+      } else {
+        recording = false;
+        recordBtn.textContent = "🎙️ Record";
+        console.log("🎥 Recorded frames:", recordData.length);
+      }
+    });
+
+    replayBtn.addEventListener("click", async () => {
+      if (recording || recordData.length === 0) return;
+
+      do {
+        for (let i = 0; i < recordData.length; i++) {
+          const { angleX, angleY, timestamp } = recordData[i];
+          const delay = i === 0 ? 0 : timestamp - recordData[i - 1].timestamp;
+          await new Promise(res => setTimeout(res, delay));
+          sendCommand(`position:${angleX}:${angleY}`);
+          drawCrosshair(
+            ((angleX - bounds.xMin) / (bounds.xMax - bounds.xMin)) * canvas.width,
+            ((angleY - bounds.yMin) / (bounds.yMax - bounds.yMin)) * canvas.height
+          );
+        }
+      } while (loopReplayCheckbox.checked);
+
+      console.log("✅ Replay complete.");
+    });
+
+    let baseWalkUpdates   = 15;
+    let deltaWalkUpdates  = 10;
+    let baseAngleAddition = 10;
+    let deltaAngleAddition= 15;
+    let baseWaitTime      = 0.1;   // seconds
+    let deltaWaitTime     = 0.1;   // seconds
+
+    /* ---------- 2. Keep UI ↔ variables in sync ---------- */
+    const randomInputs = [
+      "baseWalkUpdates","deltaWalkUpdates",
+      "baseAngleAddition","deltaAngleAddition",
+      "baseWaitTime","deltaWaitTime"
+    ].map(id => document.getElementById(id));
+    function updateRandomVars() {
+      baseWalkUpdates = parseFloat(document.getElementById("baseWalkUpdates").value) || 0;
+      deltaWalkUpdates = parseFloat(document.getElementById("deltaWalkUpdates").value) || 0;
+      baseAngleAddition = parseFloat(document.getElementById("baseAngleAddition").value) || 0;
+      deltaAngleAddition = parseFloat(document.getElementById("deltaAngleAddition").value) || 0;
+      baseWaitTime = parseFloat(document.getElementById("baseWaitTime").value) || 1E-12;
+      deltaWaitTime = parseFloat(document.getElementById("deltaWaitTime").value) || 0;
+    }
+
+    randomInputs.forEach(inp => inp.addEventListener("input", updateRandomVars));
+    updateRandomVars(); // initialize
+
+    async function readLidar() {
+      while(readLidar){
+        sendCommand(`lidarRead`);
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+
+    let randomWalking = false;
+    
+    async function randomWalk() {
+      let currentX = canvas.width/2;
+      let currentY = canvas.height/2;
+      const leftBound = -canvas.width/2;
+      const rightBound = canvas.width/2;
+      const downBound = -canvas.height/2;
+      const upBound = canvas.height/2;
+
+
+      const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+      randomWalking = !randomWalking;
+      while(randomWalking){
+        const numSteps = Math.max(Math.round(baseWalkUpdates + deltaWalkUpdates * Math.random()),1);
+        const distLeft = Math.abs(currentX - 500 - leftBound);
+        const distRigh = Math.abs(currentX - 500 - rightBound);
+        const probLeft = (1/1000 * currentX);
+        const probRight = 1-probLeft;
+        const probUp = (1/1000 * currentY);
+        const probDown = 1-probUp;
+        const directionX = Math.random() > probLeft ? Math.random() : -Math.random();
+        const directionY = Math.random() > probUp ? Math.random() : -Math.random();
+        for (let t = 0; t < numSteps; t++) {
+          let xWalk = 0, yWalk = 0;
+
+          xWalk = (baseAngleAddition + deltaAngleAddition * Math.random()) * directionX;
+          yWalk = (baseAngleAddition + deltaAngleAddition * Math.random()) * directionY;
+          
+          const newX = currentX + xWalk
+          const newY = currentY + yWalk
+
+          handleInput(newX,newY)
+          
+          currentX = newX;
+          currentY = newY;
+
+          await sleep((baseWaitTime + deltaWaitTime * Math.random()) * 1000);
+        }
+      }
+    }
+
+    let flipX = false;
+    let flipY = false;
+
+    document.getElementById("flipXBtn").addEventListener("click", () => {
+      flipX = !flipX;
+      console.log("FlipX =", flipX);
+    });
+
+    document.getElementById("flipYBtn").addEventListener("click", () => {
+      flipY = !flipY;
+      console.log("FlipY =", flipY);
+    });
+
+    function canvasToDegrees(x, y) {
+      let angleX = bounds.xMin + (x / canvas.width) * (bounds.xMax - bounds.xMin);
+      let angleY = bounds.yMin + (y / canvas.height) * (bounds.yMax - bounds.yMin);
+
+      if (flipX) {
+        angleX = bounds.xMax - (angleX - bounds.xMin);
+      }
+      if (flipY) {
+        angleY = bounds.yMax - (angleY - bounds.yMin);
+      }
+
+      return { x: Math.round(angleX), y: Math.round(angleY) };
+    }
+
+    const videoFlipXBtn = document.getElementById("videoFlipXBtn");
+    const videoFlipYBtn = document.getElementById("videoFlipYBtn");
+    const videoResetFlipBtn = document.getElementById("videoResetFlipBtn");
+
+    // independent flip state for VIDEO ONLY
+    let vFlipX = false;
+    let vFlipY = true;
+
+    function applyVideoFlip() {
+      const sx = vFlipX ? -1 : 1;
+      const sy = vFlipY ? -1 : 1;
+      streamImg.style.transform = `scale(${sx}, ${sy})`;
+      streamImg.style.transformOrigin = "center center";
+    }
+
+    applyVideoFlip();
+
+    videoFlipXBtn.addEventListener("click", () => {
+      vFlipX = !vFlipX;
+      applyVideoFlip();
+    });
+
+    videoFlipYBtn.addEventListener("click", () => {
+      vFlipY = !vFlipY;
+      applyVideoFlip();
+    });
+  </script>
 </body>
 </html>
