@@ -60,9 +60,15 @@ let frameCount=0;
 let _lastBgDayT=-1;
 let _nebulaUpdateTimer=0;
 
-function loop(){
+const FPS_CAP = 30;
+const FRAME_MS = 1000 / FPS_CAP;
+let _lastFrameTime = 0;
+
+function loop(timestamp){
     requestAnimationFrame(loop);
     if(!W||!H) return;
+    if(timestamp - _lastFrameTime < FRAME_MS) return;
+    _lastFrameTime = timestamp - ((timestamp - _lastFrameTime) % FRAME_MS);
     frameCount++;
     updateDayNight();
     for(let i=1;i<Math.floor(window._daySpeedMult||1);i++) updateDayNight();
