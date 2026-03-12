@@ -409,17 +409,7 @@ class Nebula {
             sx:rnd(.6,1.3),  sy:rnd(.5,1.0),
             a:rnd(.08,.16), r:rnd(.5,.9),
         }));
-        if(init){
-            // On construction, bake immediately (before first draw)
-            this._bake();
-        } else {
-            // On respawn (called from updatePosition on the hot path), defer to idle
-            if(typeof requestIdleCallback==='function'){
-                requestIdleCallback(()=>{ this._bake(); _bgDirty=true; }, {timeout:500});
-            } else {
-                setTimeout(()=>{ this._bake(); _bgDirty=true; }, 0);
-            }
-        }
+        this._bake();
     }
     _bake(){
         // Render the nebula shape once into a local canvas sized to 2.8r × 2.8r
