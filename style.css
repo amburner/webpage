@@ -325,22 +325,18 @@ body > *:not(#ecosystem-canvas):not(button):not(#eco-inspect):not(#eco-god):not(
     body { max-width: 66vw; }
 }
 @media (max-width: 600px) {
-    body { padding: 10px; }
-    h1   { font-size: 14px !important; letter-spacing: 2px !important; }
+    body { padding: 2px; }
+    h1   { font-size: 24px !important; letter-spacing: 2px !important; }
     body > div:first-of-type > div:first-child {
         flex: 0 0 30% !important; width: 30% !important;
     }
     body > div:first-of-type > div:first-child button {
-        font-size: 8px !important; padding: 4px 2px !important;
+        font-size: 10px !important; padding: 4px 2px !important;
     }
     body > div:first-of-type > div:first-child p {
-    font-size: 8px !important;
+    font-size: 12px !important;
 }
 }
 @media (min-width: 800px) {
     body > div:first-of-type { padding: 0 100px; }
-}
-
-.project:nth-child(4) {
-    break-before: column;
 }
