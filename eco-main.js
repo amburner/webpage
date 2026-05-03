@@ -60,7 +60,7 @@ let frameCount=0;
 let _lastBgDayT=-1;
 let _nebulaUpdateTimer=0;
 
-const FPS_CAP = 30;
+const FPS_CAP = 24;
 const FRAME_MS = 1000 / FPS_CAP;
 let _lastFrameTime = 0;
 
@@ -105,8 +105,8 @@ function loop(timestamp){
         jellyfish: 8,
         manta: 8,
         seahorse: 8,
-        shark: 4,
-        anglerfish: 4,
+        shark: 6,
+        anglerfish: 6,
         leviathan: 2
     };
 
@@ -138,7 +138,7 @@ function loop(timestamp){
     creatures.forEach(c=>drawCreature(c));
     ctx.globalAlpha=1;
 
-    if(frameCount%120===0){
+    if(frameCount%60===0){
         const counts={}; creatures.forEach(c=>{counts[c.species]=(counts[c.species]||0)+1;});
         Object.keys(SPECIES_DEFS).forEach(sp=>{ popHistory[sp].push(counts[sp]||0); if(popHistory[sp].length>POP_MAX) popHistory[sp].shift(); });
     }
