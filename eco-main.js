@@ -118,7 +118,11 @@ function loop(timestamp){
             const n = RESPAWN_COUNT[k] ?? 2;
             
             // Only respawn if under population cap
-            if (creatures.length + n <= POP_CAP) {
+            const speciesCap   = SPECIES_CAP[k] ?? 20;
+            const speciesCount = creatures.filter(c => c.species === k).length;
+            if (speciesCount === 0) {
+                if (speciesCount + n <= speciesCap) {   // ← was: creatures.length + n <= POP_CAP
+            
                 // Spawn in scattered positions
                 Array.from({length: n}, (_, i) => ({
                     x: rnd(i < n/2 ? margin : W*0.55, i < n/2 ? W*0.45 : W - margin),
