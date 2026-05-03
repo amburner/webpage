@@ -68,8 +68,8 @@ const SPECIES_CAP = {
     jellyfish:  25,
     manta:      25,
     seahorse:   30,
-    shark:      15,
-    anglerfish: 15,
+    shark:      12,
+    anglerfish: 13,
     leviathan:  6,
 };
 const POP_MAX = 35;
