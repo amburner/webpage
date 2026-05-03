@@ -16,9 +16,9 @@
 // Each creature carries a _noGo map: { cellKey → frameMarked }.
 // Regions expire after NO_GO_TTL frames so the creature will retry them later.
 // ─────────────────────────────────────────────────────────────────────────────
-const GRID_COLS  = 10;
-const GRID_ROWS  = 10;
-const NO_GO_TTL  = 480;   // frames before a searched cell becomes available again
+const GRID_COLS  = 4;
+const GRID_ROWS  = 4;
+const NO_GO_TTL  = 960;   // frames before a searched cell becomes available again
 
 function _cellKey(x, y) {
     const col = Math.floor(clamp(x / W, 0, 0.999) * GRID_COLS);
