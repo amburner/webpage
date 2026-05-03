@@ -70,7 +70,7 @@ function doWander(c, turnCap) {
         
         // Randomly switch to relocation (Lévy exponent ~ 2)
         // Probability increases with time spent exploring
-        const relocateChance = Math.min(c._levyTimer / 200, 0.25);
+        const relocateChance = Math.min(c._levyTimer / 100, 0.25);
         if (Math.random() < relocateChance) {
             c._levyState = 'relocate';
             c._levyTimer = 0;
