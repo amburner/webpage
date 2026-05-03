@@ -16,31 +16,29 @@ const FIREBASE_CONFIG = {
 // ─────────────────────────────────────────────────────────────
 
 // How often the master tab pushes state (ms)
-const PUSH_INTERVAL    = 5000;
+const PUSH_INTERVAL  = 5000;
 // How often viewer tabs poll for new state (ms)
-const POLL_INTERVAL    = 6000;
+const POLL_INTERVAL  = 6000;
 // If no push seen in this long, any tab can claim master (ms)
-const MASTER_TIMEOUT   = 12000;
+const MASTER_TIMEOUT = 12000;
 
 // ── FIREBASE LOADER ───────────────────────────────────────────
-// Dynamically loads Firebase SDKs from CDN so no bundler needed
 const _fbVersion = '10.12.2';
 function _loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=rej; document.head.appendChild(s); }); }
 
 // ── SYNC STATE ────────────────────────────────────────────────
-let _db          = null;   // Firebase database instance
-let _isMaster    = false;  // does this tab own the sim?
-let _lastPushAt  = 0;      // timestamp of last push we did
-let _lastSeenAt  = 0;      // timestamp of last push we received
-let _pushTimer   = null;
-let _pollTimer   = null;
-let _statusEl    = null;
-let _syncReady   = false;  // true once Firebase is loaded & state fetched
+let _db        = null;
+let _isMaster  = false;
+let _lastPushAt = 0;
+let _lastSeenAt = 0;
+let _pushTimer  = null;
+let _pollTimer  = null;
+let _statusEl   = null;
+let _syncReady  = false;
 
-// Public flag — eco-main.js checks this before starting the loop
 window.ecoSyncReady = false;
 
-// ── STATUS INDICATOR ─────────────────────────────────────────
+// ── STATUS INDICATOR ──────────────────────────────────────────
 function _makeStatus(){
     _statusEl = document.createElement('div');
     _statusEl.id = 'eco-sync-status';
@@ -62,7 +60,6 @@ function _setStatus(msg, col='#9b7db5'){
 }
 
 // ── SERIALISATION ─────────────────────────────────────────────
-// Float32Array can't go to JSON directly
 function _serialiseCreatures(creatures){
     if(!creatures || !creatures.length) return [];
     return creatures.map(c=>({
@@ -75,23 +72,23 @@ function _deserialiseCreatures(raw){
     return raw.map(c=>({
         ...c,
         qTable: new Float32Array(c.qTable || []),
-        _children:     c._children     || [],
-        _scared:       c._scared       ?? 0,
-        _newborn:      c._newborn      ?? 0,
-        _wanderAngle:  c._wanderAngle  ?? Math.random()*Math.PI*2,
-        _crowdFactor:  c._crowdFactor  ?? 1,
-        _qState:       c._qState       ?? 0,
-        _qAction:      c._qAction      ?? 0,
-        _qEnergy:      c._qEnergy      ?? 160,
-        _qLock:        c._qLock        ?? 0,
-        _qHold:        c._qHold        ?? 0,
+        _children:    c._children    || [],
+        _scared:      c._scared      ?? 0,
+        _newborn:     c._newborn     ?? 0,
+        _wanderAngle: c._wanderAngle ?? Math.random()*Math.PI*2,
+        _crowdFactor: c._crowdFactor ?? 1,
+        _qState:      c._qState      ?? 0,
+        _qAction:     c._qAction     ?? 0,
+        _qEnergy:     c._qEnergy     ?? 160,
+        _qLock:       c._qLock       ?? 0,
+        _qHold:       c._qHold       ?? 0,
     }));
 }
 
 // ── BUILD SNAPSHOT ────────────────────────────────────────────
 function _buildSnapshot(){
     return {
-        version: 2,
+        version:         2,
         creatures:       _serialiseCreatures(window.creatures       || []),
         generationCount: window.generationCount ?? 0,
         evoLog:          window.evoLog           || [],
@@ -139,7 +136,6 @@ function _applySnapshot(snap){
 const _myId = Math.random().toString(36).slice(2);
 
 // ── MASTER ELECTION ───────────────────────────────────────────
-// We become master if no other tab has pushed recently
 function _electMaster(){
     const now = Date.now();
     if(now - _lastSeenAt > MASTER_TIMEOUT){
@@ -183,7 +179,6 @@ async function _poll(){
 
         _lastSeenAt = data.pushedAt || Date.now();
 
-        // Another tab is actively pushing — stay as viewer
         if(data.pusherId !== _myId){
             _applySnapshot(data);
             _setStatus('◎ SYNCED', '#00fff5');
@@ -193,11 +188,10 @@ async function _poll(){
         console.warn('[eco-sync] poll failed', e);
     }
 
-    // Check if we should become master
     _electMaster();
 }
 
-// ── REAL-TIME LISTENER (replaces polling when possible) ───────
+// ── REAL-TIME LISTENER ────────────────────────────────────────
 async function _listenRealtime(){
     try {
         const { ref, onValue } = await import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-database.js`);
@@ -205,15 +199,13 @@ async function _listenRealtime(){
             const data = snapshot.val();
             if(!data) return;
             _lastSeenAt = data.pushedAt || Date.now();
-            if(_isMaster) return; // master ignores incoming — it owns the state
-            if(data.pusherId === _myId) return; // our own push echoing back
+            if(_isMaster) return;
+            if(data.pusherId === _myId) return;
             _applySnapshot(data);
             _setStatus('◎ LIVE', '#00fff5');
         });
-        // Real-time listener is active — no need to poll
         clearInterval(_pollTimer);
     } catch(e){
-        // Fall back to polling if onValue fails
         console.warn('[eco-sync] realtime listener failed, using polling', e);
         _pollTimer = setInterval(_poll, POLL_INTERVAL);
     }
@@ -231,38 +223,20 @@ async function initSync(){
         const [
             { initializeApp },
             { getDatabase, ref, get },
-            { getAuth, signInAnonymously }          // ← add this
+            { getAuth, signInAnonymously },
         ] = await Promise.all([
             import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-app.js`),
             import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-database.js`),
-            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-auth.js`), // ← add this
+            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-auth.js`),
         ]);
 
         const app = initializeApp(FIREBASE_CONFIG);
         _db = getDatabase(app);
 
-        // Sign in anonymously before any DB access         ← add this block
+        // Sign in anonymously before any DB access
         const auth = getAuth(app);
         await signInAnonymously(auth);
         console.log('[eco-sync] signed in anonymously');
-
-        // ... rest of your existing code unchanged ...
-    // Wait for DOM so we can append the status element
-    if(document.readyState === 'loading'){
-        await new Promise(r => document.addEventListener('DOMContentLoaded', r));
-    }
-    _makeStatus();
-    _setStatus('◌ CONNECTING…', '#9b7db5');
-
-    try {
-        // Load Firebase app + database modules from CDN
-        const [{ initializeApp }, { getDatabase, ref, get }] = await Promise.all([
-            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-app.js`),
-            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-database.js`),
-        ]);
-
-        const app = initializeApp(FIREBASE_CONFIG);
-        _db = getDatabase(app);
 
         // Try to load existing state
         _setStatus('◌ LOADING…', '#9b7db5');
@@ -273,12 +247,10 @@ async function initSync(){
             _lastSeenAt = data.pushedAt || 0;
             const age = Date.now() - _lastSeenAt;
             if(age < MASTER_TIMEOUT){
-                // Recent valid save — load it, stay as viewer
                 _applySnapshot(data);
                 _setStatus('◎ LOADED', '#00fff5');
                 console.log('[eco-sync] loaded remote state, creatures:', window.creatures?.length);
             } else {
-                // Save exists but is stale — load it then claim master
                 _applySnapshot(data);
                 _isMaster = true;
                 _setStatus('◉ MASTER · RESUMED', '#ff00ff');
@@ -286,18 +258,14 @@ async function initSync(){
                 _startPushing();
             }
         } else {
-            // No valid save — start fresh as master
             _isMaster = true;
             _setStatus('◉ MASTER · NEW', '#ff00ff');
             console.log('[eco-sync] no valid save, starting fresh as master');
             _startPushing();
         }
-        // _electMaster() removed here — master status already decided above
 
-        // Start real-time listener (falls back to polling)
         await _listenRealtime();
 
-        // Save on tab close
         window.addEventListener('pagehide', ()=>{
             if(_isMaster) _push();
         });
@@ -308,7 +276,6 @@ async function initSync(){
     } catch(e){
         console.error('[eco-sync] Firebase init failed:', e);
         _setStatus('◌ OFFLINE MODE', '#ff6b35');
-        // Still let the sim run locally
         _syncReady = true;
         window.ecoSyncReady = true;
     }
