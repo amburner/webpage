@@ -15,10 +15,17 @@
 // Divides the screen into a GRID_COLS × GRID_ROWS grid.
 // Each creature carries a _noGo map: { cellKey → frameMarked }.
 // Regions expire after NO_GO_TTL frames so the creature will retry them later.
+//
+// IMPORTANT: _markSearched only stamps a cell after the creature has lingered
+// in that area for NO_TARGET_FRAMES consecutive frames with nothing in sense
+// range. This prevents flooding the map during normal movement.
+// The counter _noTargetFrames is reset any time a target IS found, or any
+// time the creature changes drive state (hunting→mating etc).
 // ─────────────────────────────────────────────────────────────────────────────
-const GRID_COLS  = 10;
-const GRID_ROWS  = 10;
-const NO_GO_TTL  = 1000;   // frames before a searched cell becomes available again
+const GRID_COLS        = 10;
+const GRID_ROWS        = 10;
+const NO_GO_TTL        = 1000; // frames before a searched cell becomes available again
+const NO_TARGET_FRAMES = 90;   // frames of fruitless searching before stamping (~1.5s @60fps)
 
 function _cellKey(x, y) {
     const col = Math.floor(clamp(x / W, 0, 0.999) * GRID_COLS);
@@ -26,10 +33,28 @@ function _cellKey(x, y) {
     return col + row * GRID_COLS;
 }
 
-// Mark the creature's current cell as searched (called when no target found)
-function _markSearched(c) {
+// Call when no target is visible. Only marks the cell after lingering long enough.
+// driveLabel lets us detect when the creature switches drives mid-search.
+function _markSearched(c, driveLabel) {
+    if (c._noTargetDrive !== driveLabel) {
+        // Drive changed — reset counter so the new drive starts fresh
+        c._noTargetDrive  = driveLabel;
+        c._noTargetFrames = 0;
+    }
+    c._noTargetFrames = (c._noTargetFrames || 0) + 1;
+    if (c._noTargetFrames < NO_TARGET_FRAMES) return;
+    // Lingered long enough with nothing in sense range — stamp this cell
+    c._noTargetFrames = 0;
     if (!c._noGo) c._noGo = {};
     c._noGo[_cellKey(c.x, c.y)] = window.frameCount || 0;
+}
+
+// Call when a target IS found — clears the current cell and resets the counter
+// so the creature will return here freely once the target is gone.
+function _clearSearched(c) {
+    c._noTargetFrames = 0;
+    c._noTargetDrive  = null;
+    if (c._noGo) delete c._noGo[_cellKey(c.x, c.y)];
 }
 
 // Prune expired entries so the map doesn't grow forever
@@ -50,7 +75,7 @@ function _isNoGo(c, x, y) {
 }
 
 // Pick a candidate world position that avoids recently-searched cells.
-// Tries up to `attempts` random points and returns the least-bad one.
+// Tries `attempts` random points and returns the least-bad one.
 function _pickAvoidTarget(c, minDist, maxDist, edgePad, attempts) {
     attempts = attempts || 8;
     let best = null, bestScore = -1;
@@ -59,7 +84,6 @@ function _pickAvoidTarget(c, minDist, maxDist, edgePad, attempts) {
         const dist  = minDist + Math.random() * (maxDist - minDist);
         const tx    = clamp(c.x + Math.cos(angle) * dist, edgePad, W - edgePad);
         const ty    = clamp(c.y + Math.sin(angle) * dist, edgePad, H - edgePad);
-        // Score: prefer cells not in noGo, and reasonably far from current pos
         const score = (_isNoGo(c, tx, ty) ? 0 : 2) + Math.random() * 0.5;
         if (score > bestScore) { bestScore = score; best = { x: tx, y: ty }; }
     }
@@ -68,17 +92,17 @@ function _pickAvoidTarget(c, minDist, maxDist, edgePad, attempts) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// KILL CHECK (INCREASED ENERGY GAIN: 6x → 12x)
+// KILL CHECK
 // ─────────────────────────────────────────────────────────────────────────────
 function doKillCheck(c, nearby) {
     for (const p of nearby) {
         if (p === c || p._dead) continue;
         const ip = (c.diet==='carn' && p.diet==='herb')
-                || (c.diet==='apex' && p.diet==='carn');  // Apex only eats carnivores now!
+                || (c.diet==='apex' && p.diet==='carn');
         if (!ip) continue;
         const dx=p.x-c.x, dy=p.y-c.y;
         if (Math.sqrt(dx*dx+dy*dy) < c.size+p.size) {
-            c.energy += p.size * 12 * (1 + c.size*0.02);  // INCREASED from 6 to 12
+            c.energy += p.size * 12 * (1 + c.size*0.02);
             p._dead = true;
         }
     }
@@ -86,7 +110,7 @@ function doKillCheck(c, nearby) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WANDER  (edge-aware, used as fallback when no target exists)
+// WANDER  (edge-aware, Lévy flight, avoids searched cells for relocation target)
 // ─────────────────────────────────────────────────────────────────────────────
 function doWander(c, turnCap) {
     if (!c._levyState) c._levyState = 'explore';
@@ -124,22 +148,19 @@ function doWander(c, turnCap) {
         if (Math.random() < relocateChance) {
             c._levyState = 'relocate';
             c._levyTimer = 0;
-
-            // ── CHANGED: prefer cells not recently searched ──────────────────
             const jumpDist = Math.pow(Math.random(), -0.5) * Math.max(W, H) * 0.3;
-            const target   = _pickAvoidTarget(c, jumpDist * 0.5, jumpDist, edgePad, 8);
-            c._levyTarget  = target;
-            // ────────────────────────────────────────────────────────────────
+            // Prefer cells not recently searched
+            c._levyTarget = _pickAvoidTarget(c, jumpDist * 0.5, jumpDist, edgePad, 8);
         }
 
     } else {  // 'relocate'
-        const dx = c._levyTarget.x - c.x;
-        const dy = c._levyTarget.y - c.y;
+        const dx   = c._levyTarget.x - c.x;
+        const dy   = c._levyTarget.y - c.y;
         const dist = Math.sqrt(dx*dx+dy*dy);
 
         if (dist < 80*S || c._levyTimer > 100) {
-            c._levyState = 'explore';
-            c._levyTimer = 0;
+            c._levyState   = 'explore';
+            c._levyTimer   = 0;
             c._wanderAngle = Math.atan2(dy, dx);
         } else {
             steerToward(c, dx, dy, turnCap * 1.3);
@@ -165,14 +186,19 @@ function decide(c, e) {
     const hungry  = c.energy < c.hunger;
     const fullish = c.energy >= c.seekMate;
 
-    // Prune stale no-go entries once in a while
+    // Prune stale no-go entries once every ~60 frames per creature
     if ((window.frameCount || 0) % 60 === 0) _pruneNoGo(c);
 
     // ── FLEE ─────────────────────────────────────────────────────────────────
+    // Fleeing overrides everything. Don't touch searched state while panicking
+    // since the creature isn't meaningfully searching — reset counter so flee
+    // time doesn't accumulate into the next real search.
     if (threatD < c.sense/2) {
         steerToward(c, threatDx*2.5, threatDy*2.5, turnCap*1.5);
-        c._scared = Math.min(c._scared + 3, 40);
-        c._state  = 'FLEEING';
+        c._scared         = Math.min(c._scared + 3, 40);
+        c._state          = 'FLEEING';
+        c._noTargetFrames = 0;
+        c._noTargetDrive  = null;
         return true;
     }
 
@@ -182,9 +208,8 @@ function decide(c, e) {
 
     if (wantFood && c.diet === 'herb') {
         if (foodD < Infinity) {
-            // ── CHANGED: found food here, clear this cell from no-go ─────────
-            if (c._noGo) delete c._noGo[_cellKey(c.x, c.y)];
-            // ──────────────────────────────────────────────────────────────────
+            // Food is within sense range — clear this cell and head for it
+            _clearSearched(c);
             const dist = Math.sqrt(foodD);
             if (dist < c.sense * 0.35) {
                 c.vx *= 0.93; c.vy *= 0.93;
@@ -196,25 +221,22 @@ function decide(c, e) {
             }
             return true;
         } else {
-            // ── CHANGED: no food visible here — mark region searched ─────────
-            _markSearched(c);
-            // ──────────────────────────────────────────────────────────────────
+            // Nothing in sense range — only stamp cell after lingering here
+            _markSearched(c, 'herb-food');
         }
     }
 
     if (wantFood && (c.diet === 'carn' || c.diet === 'apex')) {
         if (preyD < Infinity) {
-            // ── CHANGED: found prey here, clear this cell from no-go ─────────
-            if (c._noGo) delete c._noGo[_cellKey(c.x, c.y)];
-            // ──────────────────────────────────────────────────────────────────
+            // Prey is within sense range — clear this cell and chase
+            _clearSearched(c);
             steerToward(c, preyDx, preyDy, turnCap);
             doKillCheck(c, nearby);
             c._state = 'HUNTING';
             return true;
         } else {
-            // ── CHANGED: no prey visible here — mark region searched ──────────
-            _markSearched(c);
-            // ──────────────────────────────────────────────────────────────────
+            // Nothing in sense range — only stamp cell after lingering here
+            _markSearched(c, 'carn-prey');
         }
     }
 
@@ -223,9 +245,12 @@ function decide(c, e) {
     if (fullish && wantsMate) {
 
         if (mateD < Infinity) {
-            // ── CHANGED: found a mate here, clear this cell ──────────────────
-            if (c._noGo) delete c._noGo[_cellKey(c.x, c.y)];
-            // ──────────────────────────────────────────────────────────────────
+            // Mate is within sense range — clear this cell and approach
+            _clearSearched(c);
+            // Reset spiral so it restarts fresh next time mate search is needed
+            c._mateSearchTimer  = 0;
+            c._mateSearchCenter = null;
+
             const dist = Math.sqrt(mateD);
             if (dist > breedRange) {
                 steerToward(c, mateDx, mateDy, turnCap);
@@ -236,15 +261,13 @@ function decide(c, e) {
             return true;
         }
 
-        // No mate visible — mark region and spiral search
-        // ── CHANGED: mark current region as searched ─────────────────────────
-        _markSearched(c);
-        // ─────────────────────────────────────────────────────────────────────
+        // No mate in sense range — only stamp cell after lingering here
+        _markSearched(c, 'mate');
 
         if (!c._mateSearchTimer) c._mateSearchTimer = 0;
         if (!c._mateSearchCenter) {
             c._mateSearchCenter = { x: c.x, y: c.y };
-            c._mateSearchAngle = Math.random() * Math.PI * 2;
+            c._mateSearchAngle  = Math.random() * Math.PI * 2;
         }
 
         c._mateSearchTimer++;
@@ -252,7 +275,7 @@ function decide(c, e) {
         const spiralRadius = Math.min(c._mateSearchTimer * 0.5, c.sense * 4);
         c._mateSearchAngle += 0.08;
 
-        // ── CHANGED: bias spiral target away from searched regions ───────────
+        // Bias spiral step away from searched regions
         const naiveX = c._mateSearchCenter.x + Math.cos(c._mateSearchAngle) * spiralRadius;
         const naiveY = c._mateSearchCenter.y + Math.sin(c._mateSearchAngle) * spiralRadius;
         let targetX = naiveX, targetY = naiveY;
@@ -260,20 +283,17 @@ function decide(c, e) {
             const alt = _pickAvoidTarget(c, spiralRadius * 0.5, spiralRadius * 1.5, 100*S, 6);
             targetX = alt.x; targetY = alt.y;
         }
-        // ─────────────────────────────────────────────────────────────────────
 
         const dx = targetX - c.x;
         const dy = targetY - c.y;
         steerToward(c, dx, dy, turnCap);
 
+        // Reset spiral if searched too long or drifted to edge
         if (c._mateSearchTimer > 400 ||
             c.x < 100*S || c.x > W-100*S || c.y < 100*S || c.y > H-100*S) {
-            // ── CHANGED: pick new search center avoiding searched regions ─────
-            const newCenter = _pickAvoidTarget(c, 100*S, 300*S, 150*S, 6);
-            c._mateSearchCenter = newCenter;
-            // ──────────────────────────────────────────────────────────────────
-            c._mateSearchTimer = 0;
-            c._mateSearchAngle = Math.random() * Math.PI * 2;
+            c._mateSearchCenter = _pickAvoidTarget(c, 100*S, 300*S, 150*S, 6);
+            c._mateSearchTimer  = 0;
+            c._mateSearchAngle  = Math.random() * Math.PI * 2;
         }
 
         c._state = 'SEEKING MATE';
@@ -282,6 +302,10 @@ function decide(c, e) {
 
 
     // ── WANDER ───────────────────────────────────────────────────────────────
+    // Not hungry and not seeking mate. Reset search counters so they don't
+    // bleed into the next time a drive activates.
+    c._noTargetFrames = 0;
+    c._noTargetDrive  = null;
     doWander(c, turnCap);
     c._state = 'WANDERING';
     return false;
