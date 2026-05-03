@@ -53,7 +53,7 @@ const SPECIES_DEFS = {
     seahorse:   { diet:'herb', baseColor:'#ff6ec7', size:[6,12],   speed:[0.2,0.5],  sense:70,  reproduce:0.0010, hunger:70, seekMate:120, mateMin: 80, mateR: 2.5*70, activeAtNight:true, minBreedAge:250,  breedCooldown:350,  litterSize:[2,4], maxAge:[2000,4000], spawnEnergy:80, maxEnergy:200},
     shark:      { diet:'carn', baseColor:'#cc00ff', size:[18,32],  speed:[0.8,1.4],  sense:120, reproduce:0.0008, hunger:80, seekMate:120, mateMin: 80, mateR: 3.5*120,  activeAtNight:true,  minBreedAge:700,  breedCooldown:600,  litterSize:[2,3], maxAge:[4000,7000], spawnEnergy:100, maxEnergy:200},  // 200→300
     anglerfish: { diet:'carn', baseColor:'#ff2d78', size:[14,26],  speed:[0.3,0.9],  sense:130, reproduce:0.0008, hunger:80, seekMate:120, mateMin: 80, mateR: 3.5*150,  activeAtNight:true,  minBreedAge:600,  breedCooldown:600,  litterSize:[2,3], maxAge:[4000,7000], spawnEnergy:100, maxEnergy:200},  // 200→300
-    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.7,1.2], sense:200, reproduce:0.0008, hunger:150, seekMate:200, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:2500, breedCooldown:1800, litterSize:[1,1], maxAge:[7000,8000], spawnEnergy:150, maxEnergy:300},  // 200→500
+    leviathan:  { diet:'apex', baseColor:'#ff6b35', size:[40,80],  speed:[0.7,1.2], sense:200, reproduce:0.0008, hunger:120, seekMate:170, mateMin: 100, mateR: 3.5*200,  activeAtNight:true,  minBreedAge:1000, breedCooldown:1200, litterSize:[1,1], maxAge:[7000,9000], spawnEnergy:150, maxEnergy:250},  // 200→500
 };
 
 let creatures = [], evoLog = [];
