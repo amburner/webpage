@@ -325,7 +325,7 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
         const d2 = dx*dx + dy*dy;
 
         // Threat detection (unchanged)
-        const isThreat = (c.diet==='herb' && (o.diet==='carn' || o.diet==='apex'))
+        const isThreat = (c.diet==='herb' && (o.diet==='carn'))
                       || (c.diet==='carn' &&  o.diet==='apex');
         if (isThreat && d2 < (c.sense*1.5)**2 && d2 < threatD) {
             threatDx = -dx; threatDy = -dy; threatD = d2;
