@@ -221,6 +221,32 @@ async function _listenRealtime(){
 
 // ── INIT ──────────────────────────────────────────────────────
 async function initSync(){
+    if(document.readyState === 'loading'){
+        await new Promise(r => document.addEventListener('DOMContentLoaded', r));
+    }
+    _makeStatus();
+    _setStatus('◌ CONNECTING…', '#9b7db5');
+
+    try {
+        const [
+            { initializeApp },
+            { getDatabase, ref, get },
+            { getAuth, signInAnonymously }          // ← add this
+        ] = await Promise.all([
+            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-app.js`),
+            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-database.js`),
+            import(`https://www.gstatic.com/firebasejs/${_fbVersion}/firebase-auth.js`), // ← add this
+        ]);
+
+        const app = initializeApp(FIREBASE_CONFIG);
+        _db = getDatabase(app);
+
+        // Sign in anonymously before any DB access         ← add this block
+        const auth = getAuth(app);
+        await signInAnonymously(auth);
+        console.log('[eco-sync] signed in anonymously');
+
+        // ... rest of your existing code unchanged ...
     // Wait for DOM so we can append the status element
     if(document.readyState === 'loading'){
         await new Promise(r => document.addEventListener('DOMContentLoaded', r));
