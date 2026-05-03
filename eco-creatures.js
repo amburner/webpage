@@ -64,8 +64,16 @@ let traitHistory = {};
 // REMOVED: const POP_CAP = 60;  // No more hard population ceiling!
 
 let godMode = { foodMult:1.0, aggrMult:1.0, mutMult:1.0 };
+const SPECIES_CAP = {
+    jellyfish:  30,
+    manta:      30,
+    seahorse:   30,
+    shark:      20,
+    anglerfish: 20,
+    leviathan:  8,
+};
 const POP_MAX = 35;
-const POP_CAP = 35;
+const POP_CAP = Object.values(SPECIES_CAP).reduce((a,b)=>a+b, 0); // ~148, legacy
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TURN CAPS
@@ -414,16 +422,20 @@ function updateCreature(c, planets, galaxies, stars, newChildren, suns) {
     const mateClose = mateFound && Math.sqrt(mateD) < c.sense*2.5;
     const mateOk    = mateClose && mateFound.energy > mateEnergyMin;
 
+    const speciesCap   = SPECIES_CAP[c.species] ?? 20;
+    const speciesCount = creatures.filter(x=>x.species===c.species).length
+                       + newChildren.filter(x=>x.species===c.species).length;
+    
     if (c.age >= def.minBreedAge && c._breedCooldown <= 0
         && c.energy > energyThresh && mateOk
         && Math.random() < reproRate * densityPenalty
-        && creatures.length + newChildren.length < POP_CAP) {
+        && speciesCount < speciesCap) {
 
         const [litMin, litMax] = def.litterSize;
         // REMOVED: Math.min(..., POP_CAP - creatures.length - newChildren.length)
         const litter = Math.min(
             litMin + Math.floor(Math.random()*(litMax-litMin+1)),
-            POP_CAP - creatures.length - newChildren.length  // ADD THIS
+            speciesCap - speciesCount   // ← was: POP_CAP - creatures.length - newChildren.length
         );
 
         if (litter > 0) {
