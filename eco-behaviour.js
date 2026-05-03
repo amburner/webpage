@@ -91,7 +91,7 @@ function doWander(c, turnCap) {
         const dy = c._levyTarget.y - c.y;
         const dist = Math.sqrt(dx*dx + dy*dy);
         
-        if (dist < 40*S || c._levyTimer > 100) {
+        if (dist < 80*S || c._levyTimer > 100) {
             // Arrived or timeout - back to exploration
             c._levyState = 'explore';
             c._levyTimer = 0;
