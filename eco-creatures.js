@@ -69,8 +69,8 @@ const SPECIES_CAP = {
     manta:      25,
     seahorse:   30,
     shark:      12,
-    anglerfish: 13,
-    leviathan:  6,
+    anglerfish: 12,
+    leviathan:  4,
 };
 const POP_MAX = 35;
 const POP_CAP = Object.values(SPECIES_CAP).reduce((a,b)=>a+b, 0); // ~148, legacy
