@@ -11,67 +11,137 @@
 // =============================================
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SEARCHED-REGION MEMORY
-// Divides the screen into a GRID_COLS × GRID_ROWS grid.
-// Each creature carries a _noGo map: { cellKey → frameMarked }.
-// Regions expire after NO_GO_TTL frames so the creature will retry them later.
+// HYBRID GRID-SENSE MEMORY
 //
-// IMPORTANT: _markSearched only stamps a cell after the creature has lingered
-// in that area for NO_TARGET_FRAMES consecutive frames with nothing in sense
-// range. This prevents flooding the map during normal movement.
+// Grid cell size is derived per-creature from its sense radius:
+//   cellSize = c.sense * CELL_FACTOR
+//
+// This means the sense radius always spans a fixed ~(1 / CELL_FACTOR) diameter
+// in cell units, regardless of creature size. Lookups check a fixed 3×3
+// neighbourhood of cells — always exactly 9 hash probes — keeping the
+// cost firmly O(1).
+//
+// Each creature carries a _noGo map: { cellKey → frameMarked }.
+// Entries expire after NO_GO_TTL frames so the creature will retry them later.
+//
+// _markSearched only stamps cells after the creature has lingered in the area
+// for NO_TARGET_FRAMES consecutive frames with nothing in sense range.
 // The counter _noTargetFrames is reset any time a target IS found, or any
-// time the creature changes drive state (hunting→mating etc).
+// time the creature changes drive state.
 // ─────────────────────────────────────────────────────────────────────────────
-const GRID_COLS        = 10;
-const GRID_ROWS        = 10;
-const NO_GO_TTL        = 1000; // frames before a searched cell becomes available again
-const NO_TARGET_FRAMES = 90;   // frames of fruitless searching before stamping (~1.5s @60fps)
 
-function _cellKey(x, y) {
-    const col = Math.floor(clamp(x / W, 0, 0.999) * GRID_COLS);
-    const row = Math.floor(clamp(y / H, 0, 0.999) * GRID_ROWS);
-    return col + row * GRID_COLS;
+const CELL_FACTOR      = 0.5;   // cellSize = c.sense * CELL_FACTOR
+                                 // → sense diameter ≈ 2 cells across
+const NO_GO_TTL        = 1000;  // frames before a searched cell becomes available again
+const NO_TARGET_FRAMES = 90;    // frames of fruitless searching before stamping (~1.5s @60fps)
+
+// ── Cell helpers ─────────────────────────────────────────────────────────────
+
+// Compute the cell size for this creature (cached per-creature for speed)
+function _cellSize(c) {
+    return c.sense * CELL_FACTOR;
 }
 
-// Call when no target is visible. Only marks the cell after lingering long enough.
-// driveLabel lets us detect when the creature switches drives mid-search.
+// Convert a world position to integer cell coordinates for this creature
+function _cellCoords(c, x, y) {
+    const cs = _cellSize(c);
+    return { col: Math.floor(x / cs), row: Math.floor(y / cs) };
+}
+
+// Encode cell coordinates as a compact string key
+function _cellKey(col, row) {
+    return col + ',' + row;
+}
+
+// ── Core no-go API ───────────────────────────────────────────────────────────
+
+// Returns true if world-position (x,y) falls inside any unexpired searched cell.
+// Checks the 3×3 neighbourhood — 9 hash probes, O(1).
+function _isNoGo(c, x, y) {
+    if (!c._noGo) return false;
+    const now = window.frameCount || 0;
+    const cs  = _cellSize(c);
+    const col = Math.floor(x / cs);
+    const row = Math.floor(y / cs);
+    for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+            const k = _cellKey(col + dc, row + dr);
+            const t = c._noGo[k];
+            if (t !== undefined && now - t < NO_GO_TTL) return true;
+        }
+    }
+    return false;
+}
+
+// Stamp all cells whose centres fall within the creature's sense radius as searched.
+// Only called after NO_TARGET_FRAMES of fruitless lingering.
+function _stampCells(c) {
+    if (!c._noGo) c._noGo = {};
+    const now = window.frameCount || 0;
+    const cs  = _cellSize(c);
+    // The sense radius covers a square of side ≈ 2/CELL_FACTOR cells.
+    // With CELL_FACTOR=0.5 that is ~4 cells per side; iterate that footprint.
+    const halfCells = Math.ceil(1 / CELL_FACTOR) + 1;
+    const { col: cc, row: cr } = _cellCoords(c, c.x, c.y);
+    const senseR2 = c.sense * c.sense;
+    for (let dr = -halfCells; dr <= halfCells; dr++) {
+        for (let dc = -halfCells; dc <= halfCells; dc++) {
+            // Use cell-centre distance so only cells actually inside sense
+            // radius are stamped, not the full bounding square
+            const wx = (cc + dc + 0.5) * cs;
+            const wy = (cr + dr + 0.5) * cs;
+            const dx = wx - c.x, dy = wy - c.y;
+            if (dx*dx + dy*dy <= senseR2) {
+                c._noGo[_cellKey(cc + dc, cr + dr)] = now;
+            }
+        }
+    }
+}
+
+// Call when no target is visible. Increments the linger counter and stamps
+// cells only after NO_TARGET_FRAMES have elapsed.
+// driveLabel detects when the creature switches drives mid-search.
 function _markSearched(c, driveLabel) {
     if (c._noTargetDrive !== driveLabel) {
-        // Drive changed — reset counter so the new drive starts fresh
         c._noTargetDrive  = driveLabel;
         c._noTargetFrames = 0;
     }
     c._noTargetFrames = (c._noTargetFrames || 0) + 1;
     if (c._noTargetFrames < NO_TARGET_FRAMES) return;
-    // Lingered long enough with nothing in sense range — stamp this cell
     c._noTargetFrames = 0;
-    if (!c._noGo) c._noGo = {};
-    c._noGo[_cellKey(c.x, c.y)] = window.frameCount || 0;
+    _stampCells(c);
 }
 
-// Call when a target IS found — clears the current cell and resets the counter
-// so the creature will return here freely once the target is gone.
+// Call when a target IS found — clears the cells under the creature so it
+// will freely return here once the target is gone, and resets the counter.
 function _clearSearched(c) {
     c._noTargetFrames = 0;
     c._noTargetDrive  = null;
-    if (c._noGo) delete c._noGo[_cellKey(c.x, c.y)];
+    if (!c._noGo) return;
+    const cs = _cellSize(c);
+    const { col: cc, row: cr } = _cellCoords(c, c.x, c.y);
+    const halfCells = Math.ceil(1 / CELL_FACTOR) + 1;
+    const senseR2   = c.sense * c.sense;
+    for (let dr = -halfCells; dr <= halfCells; dr++) {
+        for (let dc = -halfCells; dc <= halfCells; dc++) {
+            const wx = (cc + dc + 0.5) * cs;
+            const wy = (cr + dr + 0.5) * cs;
+            const dx = wx - c.x, dy = wy - c.y;
+            if (dx*dx + dy*dy <= senseR2) {
+                delete c._noGo[_cellKey(cc + dc, cr + dr)];
+            }
+        }
+    }
 }
 
-// Prune expired entries so the map doesn't grow forever
+// Prune expired entries so the map doesn't grow forever.
+// Called every ~60 frames per creature.
 function _pruneNoGo(c) {
     if (!c._noGo) return;
     const now = window.frameCount || 0;
     for (const k in c._noGo) {
-        if (now - c._noGo[k] > NO_GO_TTL) delete c._noGo[k];
+        if (now - c._noGo[k] >= NO_GO_TTL) delete c._noGo[k];
     }
-}
-
-// Returns true if world-position (x,y) is inside a recently-searched cell
-function _isNoGo(c, x, y) {
-    if (!c._noGo) return false;
-    const k = _cellKey(x, y);
-    if (!(k in c._noGo)) return false;
-    return (window.frameCount || 0) - c._noGo[k] < NO_GO_TTL;
 }
 
 // Pick a candidate world position that avoids recently-searched cells.
@@ -190,9 +260,8 @@ function decide(c, e) {
     if ((window.frameCount || 0) % 60 === 0) _pruneNoGo(c);
 
     // ── FLEE ─────────────────────────────────────────────────────────────────
-    // Fleeing overrides everything. Don't touch searched state while panicking
-    // since the creature isn't meaningfully searching — reset counter so flee
-    // time doesn't accumulate into the next real search.
+    // Fleeing overrides everything. Reset counter so flee time doesn't
+    // accumulate into the next real search.
     if (threatD < c.sense/2) {
         steerToward(c, threatDx*2.5, threatDy*2.5, turnCap*1.5);
         c._scared         = Math.min(c._scared + 3, 40);
@@ -208,7 +277,6 @@ function decide(c, e) {
 
     if (wantFood && c.diet === 'herb') {
         if (foodD < Infinity) {
-            // Food is within sense range — clear this cell and head for it
             _clearSearched(c);
             const dist = Math.sqrt(foodD);
             if (dist < c.sense * 0.35) {
@@ -221,21 +289,18 @@ function decide(c, e) {
             }
             return true;
         } else {
-            // Nothing in sense range — only stamp cell after lingering here
             _markSearched(c, 'herb-food');
         }
     }
 
     if (wantFood && (c.diet === 'carn' || c.diet === 'apex')) {
         if (preyD < Infinity) {
-            // Prey is within sense range — clear this cell and chase
             _clearSearched(c);
             steerToward(c, preyDx, preyDy, turnCap);
             doKillCheck(c, nearby);
             c._state = 'HUNTING';
             return true;
         } else {
-            // Nothing in sense range — only stamp cell after lingering here
             _markSearched(c, 'carn-prey');
         }
     }
@@ -245,9 +310,7 @@ function decide(c, e) {
     if (fullish && wantsMate) {
 
         if (mateD < Infinity) {
-            // Mate is within sense range — clear this cell and approach
             _clearSearched(c);
-            // Reset spiral so it restarts fresh next time mate search is needed
             c._mateSearchTimer  = 0;
             c._mateSearchCenter = null;
 
@@ -261,7 +324,6 @@ function decide(c, e) {
             return true;
         }
 
-        // No mate in sense range — only stamp cell after lingering here
         _markSearched(c, 'mate');
 
         if (!c._mateSearchTimer) c._mateSearchTimer = 0;
@@ -275,7 +337,6 @@ function decide(c, e) {
         const spiralRadius = Math.min(c._mateSearchTimer * 0.5, c.sense * 4);
         c._mateSearchAngle += 0.08;
 
-        // Bias spiral step away from searched regions
         const naiveX = c._mateSearchCenter.x + Math.cos(c._mateSearchAngle) * spiralRadius;
         const naiveY = c._mateSearchCenter.y + Math.sin(c._mateSearchAngle) * spiralRadius;
         let targetX = naiveX, targetY = naiveY;
@@ -288,7 +349,6 @@ function decide(c, e) {
         const dy = targetY - c.y;
         steerToward(c, dx, dy, turnCap);
 
-        // Reset spiral if searched too long or drifted to edge
         if (c._mateSearchTimer > 400 ||
             c.x < 100*S || c.x > W-100*S || c.y < 100*S || c.y > H-100*S) {
             c._mateSearchCenter = _pickAvoidTarget(c, 100*S, 300*S, 150*S, 6);
@@ -302,8 +362,6 @@ function decide(c, e) {
 
 
     // ── WANDER ───────────────────────────────────────────────────────────────
-    // Not hungry and not seeking mate. Reset search counters so they don't
-    // bleed into the next time a drive activates.
     c._noTargetFrames = 0;
     c._noTargetDrive  = null;
     doWander(c, turnCap);
@@ -313,7 +371,7 @@ function decide(c, e) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SPAWN FIELDS  — nothing extra needed for this system
+// SPAWN FIELDS
 // ─────────────────────────────────────────────────────────────────────────────
 function behaviourSpawnFields(parent) {
     return {};
