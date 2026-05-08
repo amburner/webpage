@@ -12,51 +12,25 @@
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HYBRID GRID-SENSE MEMORY
-//
-// Grid cell size is derived per-creature from its sense radius:
-//   cellSize = c.sense * CELL_FACTOR
-//
-// This means the sense radius always spans a fixed ~(1 / CELL_FACTOR) diameter
-// in cell units, regardless of creature size. Lookups check a fixed 3×3
-// neighbourhood of cells — always exactly 9 hash probes — keeping the
-// cost firmly O(1).
-//
-// Each creature carries a _noGo map: { cellKey → frameMarked }.
-// Entries expire after NO_GO_TTL frames so the creature will retry them later.
-//
-// _markSearched only stamps cells after the creature has lingered in the area
-// for NO_TARGET_FRAMES consecutive frames with nothing in sense range.
-// The counter _noTargetFrames is reset any time a target IS found, or any
-// time the creature changes drive state.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CELL_FACTOR      = 0.5;   // cellSize = c.sense * CELL_FACTOR
-                                 // → sense diameter ≈ 2 cells across
-const NO_GO_TTL        = 1000;  // frames before a searched cell becomes available again
-const NO_TARGET_FRAMES = 90;    // frames of fruitless searching before stamping (~1.5s @60fps)
+const CELL_FACTOR      = 0.5;
+const NO_GO_TTL        = 1000;
+const NO_TARGET_FRAMES = 90;
 
-// ── Cell helpers ─────────────────────────────────────────────────────────────
-
-// Compute the cell size for this creature (cached per-creature for speed)
 function _cellSize(c) {
     return c.sense * CELL_FACTOR;
 }
 
-// Convert a world position to integer cell coordinates for this creature
 function _cellCoords(c, x, y) {
     const cs = _cellSize(c);
     return { col: Math.floor(x / cs), row: Math.floor(y / cs) };
 }
 
-// Encode cell coordinates as a compact string key
 function _cellKey(col, row) {
     return col + ',' + row;
 }
 
-// ── Core no-go API ───────────────────────────────────────────────────────────
-
-// Returns true if world-position (x,y) falls inside any unexpired searched cell.
-// Checks the 3×3 neighbourhood — 9 hash probes, O(1).
 function _isNoGo(c, x, y) {
     if (!c._noGo) return false;
     const now = window.frameCount || 0;
@@ -73,21 +47,15 @@ function _isNoGo(c, x, y) {
     return false;
 }
 
-// Stamp all cells whose centres fall within the creature's sense radius as searched.
-// Only called after NO_TARGET_FRAMES of fruitless lingering.
 function _stampCells(c) {
     if (!c._noGo) c._noGo = {};
     const now = window.frameCount || 0;
     const cs  = _cellSize(c);
-    // The sense radius covers a square of side ≈ 2/CELL_FACTOR cells.
-    // With CELL_FACTOR=0.5 that is ~4 cells per side; iterate that footprint.
     const halfCells = Math.ceil(1 / CELL_FACTOR) + 1;
     const { col: cc, row: cr } = _cellCoords(c, c.x, c.y);
     const senseR2 = c.sense * c.sense;
     for (let dr = -halfCells; dr <= halfCells; dr++) {
         for (let dc = -halfCells; dc <= halfCells; dc++) {
-            // Use cell-centre distance so only cells actually inside sense
-            // radius are stamped, not the full bounding square
             const wx = (cc + dc + 0.5) * cs;
             const wy = (cr + dr + 0.5) * cs;
             const dx = wx - c.x, dy = wy - c.y;
@@ -98,9 +66,6 @@ function _stampCells(c) {
     }
 }
 
-// Call when no target is visible. Increments the linger counter and stamps
-// cells only after NO_TARGET_FRAMES have elapsed.
-// driveLabel detects when the creature switches drives mid-search.
 function _markSearched(c, driveLabel) {
     if (c._noTargetDrive !== driveLabel) {
         c._noTargetDrive  = driveLabel;
@@ -112,8 +77,6 @@ function _markSearched(c, driveLabel) {
     _stampCells(c);
 }
 
-// Call when a target IS found — clears the cells under the creature so it
-// will freely return here once the target is gone, and resets the counter.
 function _clearSearched(c) {
     c._noTargetFrames = 0;
     c._noTargetDrive  = null;
@@ -134,8 +97,6 @@ function _clearSearched(c) {
     }
 }
 
-// Prune expired entries so the map doesn't grow forever.
-// Called every ~60 frames per creature.
 function _pruneNoGo(c) {
     if (!c._noGo) return;
     const now = window.frameCount || 0;
@@ -144,8 +105,6 @@ function _pruneNoGo(c) {
     }
 }
 
-// Pick a candidate world position that avoids recently-searched cells.
-// Tries `attempts` random points and returns the least-bad one.
 function _pickAvoidTarget(c, minDist, maxDist, edgePad, attempts) {
     attempts = attempts || 8;
     let best = null, bestScore = -1;
@@ -180,62 +139,68 @@ function doKillCheck(c, nearby) {
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WANDER  (edge-aware, Lévy flight, avoids searched cells for relocation target)
+// WANDER  (edge-aware, Lévy flight, avoids searched cells)
+//
+// FIX: replaced tiny per-frame angle jitter (which caused wiggling) with a
+// committed heading that only updates when the creature picks a new waypoint.
+// Speed is now always full speed — no 0.7 damper that made movement feel slow.
 // ─────────────────────────────────────────────────────────────────────────────
+const WANDER_WAYPOINT_DIST  = 120;  // px — how close before picking next waypoint
+const WANDER_WAYPOINT_RANGE = 0.45; // fraction of screen diagonal for waypoint distance
+
 function doWander(c, turnCap) {
-    if (!c._levyState) c._levyState = 'explore';
-    if (!c._levyTimer) c._levyTimer = 0;
+    const edgePad = 150 * S;
 
-    c._levyTimer++;
-
-    const edgePad = 150*S;
+    // ── Edge repulsion: override heading toward center ────────────────────
     let wb = 0;
-    if (c.x < edgePad)   wb  =  Math.PI*0.5*(1 - c.x/edgePad);
-    if (c.x > W-edgePad) wb  = -Math.PI*0.5*(1 - (W-c.x)/edgePad);
-    if (c.y < edgePad)   wb +=  Math.PI*0.5*(1 - c.y/edgePad);
-    if (c.y > H-edgePad) wb -= Math.PI*0.5*(1 - (H-c.y)/edgePad);
+    if (c.x < edgePad)   wb  =  Math.PI * 0.5 * (1 - c.x / edgePad);
+    if (c.x > W-edgePad) wb  = -Math.PI * 0.5 * (1 - (W - c.x) / edgePad);
+    if (c.y < edgePad)   wb +=  Math.PI * 0.5 * (1 - c.y / edgePad);
+    if (c.y > H-edgePad) wb -= Math.PI * 0.5 * (1 - (H - c.y) / edgePad);
 
     if (wb !== 0) {
-        const tgt  = Math.atan2(H/2 - c.y, W/2 - c.x);
-        const diff = ((tgt - c._wanderAngle + Math.PI*3) % (Math.PI*2)) - Math.PI;
-        const str  = clamp(Math.abs(wb) / (Math.PI*0.5), 0, 1);
-        c._wanderAngle += clamp(diff*0.12*str, -turnCap*3, turnCap*3);
-        c._levyState = 'explore';
-        c._levyTimer = 0;
-        steerToward(c, Math.cos(c._wanderAngle)*c.speed, Math.sin(c._wanderAngle)*c.speed, turnCap);
+        const tgt  = Math.atan2(H / 2 - c.y, W / 2 - c.x);
+        const diff = ((tgt - c._wanderAngle + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
+        const str  = clamp(Math.abs(wb) / (Math.PI * 0.5), 0, 1);
+        c._wanderAngle += clamp(diff * 0.15 * str, -turnCap * 3, turnCap * 3);
+        // Clear waypoint so we pick a safe one after leaving edge zone
+        c._wanderTarget = null;
+        steerToward(c, Math.cos(c._wanderAngle) * c.speed, Math.sin(c._wanderAngle) * c.speed, turnCap);
         return;
     }
 
-    if (c._levyState === 'explore') {
-        c._wanderAngle += clamp(rnd(-0.025, 0.025), -0.02, 0.02);
-        steerToward(c,
-            Math.cos(c._wanderAngle) * c.speed * 0.7,
-            Math.sin(c._wanderAngle) * c.speed * 0.7,
-            turnCap
-        );
-
-        const relocateChance = Math.min(c._levyTimer / 100, 0.25);
-        if (Math.random() < relocateChance) {
-            c._levyState = 'relocate';
-            c._levyTimer = 0;
-            const jumpDist = Math.pow(Math.random(), -0.5) * Math.max(W, H) * 0.3;
-            // Prefer cells not recently searched
-            c._levyTarget = _pickAvoidTarget(c, jumpDist * 0.5, jumpDist, edgePad, 8);
-        }
-
-    } else {  // 'relocate'
-        const dx   = c._levyTarget.x - c.x;
-        const dy   = c._levyTarget.y - c.y;
-        const dist = Math.sqrt(dx*dx+dy*dy);
-
-        if (dist < 80*S || c._levyTimer > 100) {
-            c._levyState   = 'explore';
-            c._levyTimer   = 0;
-            c._wanderAngle = Math.atan2(dy, dx);
-        } else {
-            steerToward(c, dx, dy, turnCap * 1.3);
+    // ── Waypoint-based wander: pick a destination, walk straight to it ────
+    // No waypoint yet, or close enough to current one → pick a new one.
+    if (!c._wanderTarget) {
+        _pickNewWanderTarget(c, edgePad);
+    } else {
+        const dx   = c._wanderTarget.x - c.x;
+        const dy   = c._wanderTarget.y - c.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < WANDER_WAYPOINT_DIST) {
+            _pickNewWanderTarget(c, edgePad);
         }
     }
+
+    const dx = c._wanderTarget.x - c.x;
+    const dy = c._wanderTarget.y - c.y;
+    // Steer at full speed toward waypoint — no speed damper
+    steerToward(c, dx, dy, turnCap);
+    c._state = 'WANDERING';
+}
+
+function _pickNewWanderTarget(c, edgePad) {
+    // Lévy-like: occasionally jump far, usually medium distance
+    const diagonal  = Math.sqrt(W * W + H * H);
+    const levy      = Math.pow(Math.random(), -0.6); // heavy tail
+    const jumpDist  = clamp(levy * diagonal * WANDER_WAYPOINT_RANGE, 80 * S, diagonal * 0.6);
+
+    // Prefer directions not recently searched
+    c._wanderTarget = _pickAvoidTarget(c, jumpDist * 0.4, jumpDist, edgePad, 8);
+    // Keep angle in sync for edge-repulsion blending
+    const dx = c._wanderTarget.x - c.x;
+    const dy = c._wanderTarget.y - c.y;
+    if (dx !== 0 || dy !== 0) c._wanderAngle = Math.atan2(dy, dx);
 }
 
 
@@ -256,14 +221,11 @@ function decide(c, e) {
     const hungry  = c.energy < c.hunger;
     const fullish = c.energy >= c.seekMate;
 
-    // Prune stale no-go entries once every ~60 frames per creature
     if ((window.frameCount || 0) % 60 === 0) _pruneNoGo(c);
 
     // ── FLEE ─────────────────────────────────────────────────────────────────
-    // Fleeing overrides everything. Reset counter so flee time doesn't
-    // accumulate into the next real search.
-    if (threatD < c.sense/2) {
-        steerToward(c, threatDx*2.5, threatDy*2.5, turnCap*1.5);
+    if (threatD < c.sense / 2) {
+        steerToward(c, threatDx * 2.5, threatDy * 2.5, turnCap * 1.5);
         c._scared         = Math.min(c._scared + 3, 40);
         c._state          = 'FLEEING';
         c._noTargetFrames = 0;
@@ -279,9 +241,12 @@ function decide(c, e) {
         if (foodD < Infinity) {
             _clearSearched(c);
             const dist = Math.sqrt(foodD);
+
             if (dist < c.sense * 0.35) {
-                c.vx *= 0.93; c.vy *= 0.93;
-                steerToward(c, foodDx*0.25, foodDy*0.25, turnCap*0.3);
+                // Close enough — slow approach so we don't overshoot, but don't
+                // go below half speed (prevents the jittery micro-crawl)
+                const approach = Math.max(dist / (c.sense * 0.35), 0.5);
+                steerToward(c, foodDx * approach, foodDy * approach, turnCap * 0.6);
                 c._state = 'GRAZING';
             } else {
                 steerToward(c, foodDx, foodDy, turnCap);
@@ -316,9 +281,12 @@ function decide(c, e) {
 
             const dist = Math.sqrt(mateD);
             if (dist > breedRange) {
+                // Walk straight toward mate — no tangential orbit wiggle
                 steerToward(c, mateDx, mateDy, turnCap);
             } else {
-                steerToward(c, -mateDy/dist*c.speed*0.35, mateDx/dist*c.speed*0.35, turnCap);
+                // Already in breed range: hold position gently
+                c.vx *= 0.85;
+                c.vy *= 0.85;
             }
             c._state = 'MATING';
             return true;
@@ -334,14 +302,16 @@ function decide(c, e) {
 
         c._mateSearchTimer++;
 
-        const spiralRadius = Math.min(c._mateSearchTimer * 0.5, c.sense * 4);
-        c._mateSearchAngle += 0.08;
+        // Spiral outward from search center, but use larger angle increments
+        // (was 0.08 which caused tight circles/wiggling)
+        const spiralRadius = Math.min(c._mateSearchTimer * 0.8, c.sense * 5);
+        c._mateSearchAngle += 0.12;
 
         const naiveX = c._mateSearchCenter.x + Math.cos(c._mateSearchAngle) * spiralRadius;
         const naiveY = c._mateSearchCenter.y + Math.sin(c._mateSearchAngle) * spiralRadius;
         let targetX = naiveX, targetY = naiveY;
         if (_isNoGo(c, naiveX, naiveY)) {
-            const alt = _pickAvoidTarget(c, spiralRadius * 0.5, spiralRadius * 1.5, 100*S, 6);
+            const alt = _pickAvoidTarget(c, spiralRadius * 0.5, spiralRadius * 1.5, 100 * S, 6);
             targetX = alt.x; targetY = alt.y;
         }
 
