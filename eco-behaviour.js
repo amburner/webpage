@@ -12,51 +12,25 @@
 
 // ─────────────────────────────────────────────────────────────────────────────
 // HYBRID GRID-SENSE MEMORY
-//
-// Grid cell size is derived per-creature from its sense radius:
-//   cellSize = c.sense * CELL_FACTOR
-//
-// This means the sense radius always spans a fixed ~(1 / CELL_FACTOR) diameter
-// in cell units, regardless of creature size. Lookups check a fixed 3×3
-// neighbourhood of cells — always exactly 9 hash probes — keeping the
-// cost firmly O(1).
-//
-// Each creature carries a _noGo map: { cellKey → frameMarked }.
-// Entries expire after NO_GO_TTL frames so the creature will retry them later.
-//
-// _markSearched only stamps cells after the creature has lingered in the area
-// for NO_TARGET_FRAMES consecutive frames with nothing in sense range.
-// The counter _noTargetFrames is reset any time a target IS found, or any
-// time the creature changes drive state.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CELL_FACTOR      = 0.5;   // cellSize = c.sense * CELL_FACTOR
-                                 // → sense diameter ≈ 2 cells across
-const NO_GO_TTL        = 1000;  // frames before a searched cell becomes available again
-const NO_TARGET_FRAMES = 90;    // frames of fruitless searching before stamping (~1.5s @60fps)
+const CELL_FACTOR      = 0.5;
+const NO_GO_TTL        = 1000;
+const NO_TARGET_FRAMES = 90;
 
-// ── Cell helpers ─────────────────────────────────────────────────────────────
-
-// Compute the cell size for this creature (cached per-creature for speed)
 function _cellSize(c) {
     return c.sense * CELL_FACTOR;
 }
 
-// Convert a world position to integer cell coordinates for this creature
 function _cellCoords(c, x, y) {
     const cs = _cellSize(c);
     return { col: Math.floor(x / cs), row: Math.floor(y / cs) };
 }
 
-// Encode cell coordinates as a compact string key
 function _cellKey(col, row) {
     return col + ',' + row;
 }
 
-// ── Core no-go API ───────────────────────────────────────────────────────────
-
-// Returns true if world-position (x,y) falls inside any unexpired searched cell.
-// Checks the 3×3 neighbourhood — 9 hash probes, O(1).
 function _isNoGo(c, x, y) {
     if (!c._noGo) return false;
     const now = window.frameCount || 0;
@@ -73,21 +47,15 @@ function _isNoGo(c, x, y) {
     return false;
 }
 
-// Stamp all cells whose centres fall within the creature's sense radius as searched.
-// Only called after NO_TARGET_FRAMES of fruitless lingering.
 function _stampCells(c) {
     if (!c._noGo) c._noGo = {};
     const now = window.frameCount || 0;
     const cs  = _cellSize(c);
-    // The sense radius covers a square of side ≈ 2/CELL_FACTOR cells.
-    // With CELL_FACTOR=0.5 that is ~4 cells per side; iterate that footprint.
     const halfCells = Math.ceil(1 / CELL_FACTOR) + 1;
     const { col: cc, row: cr } = _cellCoords(c, c.x, c.y);
     const senseR2 = c.sense * c.sense;
     for (let dr = -halfCells; dr <= halfCells; dr++) {
         for (let dc = -halfCells; dc <= halfCells; dc++) {
-            // Use cell-centre distance so only cells actually inside sense
-            // radius are stamped, not the full bounding square
             const wx = (cc + dc + 0.5) * cs;
             const wy = (cr + dr + 0.5) * cs;
             const dx = wx - c.x, dy = wy - c.y;
@@ -98,9 +66,6 @@ function _stampCells(c) {
     }
 }
 
-// Call when no target is visible. Increments the linger counter and stamps
-// cells only after NO_TARGET_FRAMES have elapsed.
-// driveLabel detects when the creature switches drives mid-search.
 function _markSearched(c, driveLabel) {
     if (c._noTargetDrive !== driveLabel) {
         c._noTargetDrive  = driveLabel;
@@ -112,8 +77,6 @@ function _markSearched(c, driveLabel) {
     _stampCells(c);
 }
 
-// Call when a target IS found — clears the cells under the creature so it
-// will freely return here once the target is gone, and resets the counter.
 function _clearSearched(c) {
     c._noTargetFrames = 0;
     c._noTargetDrive  = null;
@@ -134,8 +97,6 @@ function _clearSearched(c) {
     }
 }
 
-// Prune expired entries so the map doesn't grow forever.
-// Called every ~60 frames per creature.
 function _pruneNoGo(c) {
     if (!c._noGo) return;
     const now = window.frameCount || 0;
@@ -144,8 +105,6 @@ function _pruneNoGo(c) {
     }
 }
 
-// Pick a candidate world position that avoids recently-searched cells.
-// Tries `attempts` random points and returns the least-bad one.
 function _pickAvoidTarget(c, minDist, maxDist, edgePad, attempts) {
     attempts = attempts || 8;
     let best = null, bestScore = -1;
@@ -181,6 +140,13 @@ function doKillCheck(c, nearby) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WANDER  (edge-aware, Lévy flight, avoids searched cells for relocation target)
+//
+// Changes from original (two lines only):
+//   1. explore mode: removed rnd(-0.025, 0.025) angle jitter every frame.
+//      Angle is now only updated when a Lévy relocate fires, which is the
+//      intended behaviour — straight legs between direction changes.
+//   2. explore mode: removed * 0.7 speed damper.
+//      Creatures now move at full speed on explore legs, matching relocate legs.
 // ─────────────────────────────────────────────────────────────────────────────
 function doWander(c, turnCap) {
     if (!c._levyState) c._levyState = 'explore';
@@ -207,10 +173,10 @@ function doWander(c, turnCap) {
     }
 
     if (c._levyState === 'explore') {
-        c._wanderAngle += clamp(rnd(-0.025, 0.025), -0.02, 0.02);
+        // (no per-frame angle jitter here — was: c._wanderAngle += clamp(rnd(-0.025, 0.025), -0.02, 0.02))
         steerToward(c,
-            Math.cos(c._wanderAngle) * c.speed * 0.7,
-            Math.sin(c._wanderAngle) * c.speed * 0.7,
+            Math.cos(c._wanderAngle) * c.speed,   // (no * 0.7 damper)
+            Math.sin(c._wanderAngle) * c.speed,
             turnCap
         );
 
@@ -219,7 +185,6 @@ function doWander(c, turnCap) {
             c._levyState = 'relocate';
             c._levyTimer = 0;
             const jumpDist = Math.pow(Math.random(), -0.5) * Math.max(W, H) * 0.3;
-            // Prefer cells not recently searched
             c._levyTarget = _pickAvoidTarget(c, jumpDist * 0.5, jumpDist, edgePad, 8);
         }
 
@@ -256,12 +221,9 @@ function decide(c, e) {
     const hungry  = c.energy < c.hunger;
     const fullish = c.energy >= c.seekMate;
 
-    // Prune stale no-go entries once every ~60 frames per creature
     if ((window.frameCount || 0) % 60 === 0) _pruneNoGo(c);
 
     // ── FLEE ─────────────────────────────────────────────────────────────────
-    // Fleeing overrides everything. Reset counter so flee time doesn't
-    // accumulate into the next real search.
     if (threatD < c.sense/2) {
         steerToward(c, threatDx*2.5, threatDy*2.5, turnCap*1.5);
         c._scared         = Math.min(c._scared + 3, 40);
